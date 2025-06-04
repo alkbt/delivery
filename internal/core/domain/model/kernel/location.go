@@ -206,7 +206,7 @@ func (l Location) IsEqual(other Location) (bool, error) {
 //   - other: The Location to calculate distance to
 //
 // Returns:
-//   - Coordinate: The Manhattan distance between the two locations
+//   - int: The Manhattan distance between the two locations
 //   - error: Validation error if either location is improperly constructed
 //
 // Example:
@@ -220,14 +220,14 @@ func (l Location) IsEqual(other Location) (bool, error) {
 //	// Distance is symmetric
 //	distance2, _ := loc2.Distance(loc1)
 //	// distance2 = 7 (same as distance)
-func (l Location) Distance(other Location) (Coordinate, error) {
+func (l Location) Distance(other Location) (int, error) {
 	if err := errors.Join(l.Validate(), other.Validate()); err != nil {
 		return 0, err
 	}
 
 	dx := abs(l.x - other.x)
 	dy := abs(l.y - other.y)
-	return dx + dy, nil
+	return int(dx + dy), nil
 }
 
 // setX sets the x coordinate with validation.
