@@ -20,3 +20,4 @@ tmp/*
 
 .tmp/*
 !.tmp/.keep
+.DS_Store
