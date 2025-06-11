@@ -243,7 +243,7 @@ func TestLocation_Distance(t *testing.T) {
 		name    string
 		loc1    kernel.Location
 		loc2    kernel.Location
-		want    kernel.Coordinate
+		want    int
 		wantErr bool
 	}{
 		{
@@ -317,7 +317,7 @@ func TestLocation_Distance(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.Equal(t, kernel.Coordinate(0), got)
+				assert.Equal(t, 0, got)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want, got)
@@ -335,13 +335,13 @@ func TestLocation_DistanceProperties(t *testing.T) {
 					for y2 := kernel.LocationMinY; y2 <= kernel.LocationMaxY; y2++ {
 						loc1 := mustNewLocation(t, x1, y1)
 						loc2 := mustNewLocation(t, x2, y2)
-						
+
 						dist1, err1 := loc1.Distance(loc2)
 						require.NoError(t, err1)
-						
+
 						dist2, err2 := loc2.Distance(loc1)
 						require.NoError(t, err2)
-						
+
 						assert.Equal(t, dist1, dist2, "Distance should be symmetric for %v and %v", loc1, loc2)
 					}
 				}
@@ -356,7 +356,7 @@ func TestLocation_DistanceProperties(t *testing.T) {
 				loc := mustNewLocation(t, x, y)
 				dist, err := loc.Distance(loc)
 				require.NoError(t, err)
-				assert.Equal(t, kernel.Coordinate(0), dist, "Distance from location to itself should be 0")
+				assert.Equal(t, 0, dist, "Distance from location to itself should be 0")
 			}
 		}
 	})
@@ -364,7 +364,7 @@ func TestLocation_DistanceProperties(t *testing.T) {
 	t.Run("triangle inequality", func(t *testing.T) {
 		// Test that distance(A, C) <= distance(A, B) + distance(B, C)
 		testCases := []struct {
-			name string
+			name    string
 			a, b, c kernel.Coordinate
 		}{
 			{"diagonal", 1, 5, 10},
@@ -419,12 +419,12 @@ func TestLocation_EdgeCases(t *testing.T) {
 	t.Run("maximum possible distance", func(t *testing.T) {
 		corner1 := mustNewLocation(t, kernel.LocationMinX, kernel.LocationMinY)
 		corner2 := mustNewLocation(t, kernel.LocationMaxX, kernel.LocationMaxY)
-		
+
 		expectedMaxDistance := (kernel.LocationMaxX - kernel.LocationMinX) + (kernel.LocationMaxY - kernel.LocationMinY)
-		
+
 		dist, err := corner1.Distance(corner2)
 		require.NoError(t, err)
-		assert.Equal(t, expectedMaxDistance, dist)
+		assert.Equal(t, int(expectedMaxDistance), dist)
 	})
 }
 
@@ -433,13 +433,13 @@ func FuzzNewLocation(f *testing.F) {
 	f.Add(int8(1), int8(1))
 	f.Add(int8(10), int8(10))
 	f.Add(int8(5), int8(5))
-	f.Add(int8(0), int8(11))  // Invalid values
+	f.Add(int8(0), int8(11)) // Invalid values
 
 	f.Fuzz(func(t *testing.T, x, y int8) {
 		loc, err := kernel.NewLocation(kernel.Coordinate(x), kernel.Coordinate(y))
-		
+
 		if x >= int8(kernel.LocationMinX) && x <= int8(kernel.LocationMaxX) &&
-		   y >= int8(kernel.LocationMinY) && y <= int8(kernel.LocationMaxY) {
+			y >= int8(kernel.LocationMinY) && y <= int8(kernel.LocationMaxY) {
 			// Should succeed
 			require.NoError(t, err)
 			assert.Equal(t, kernel.Coordinate(x), loc.X())
