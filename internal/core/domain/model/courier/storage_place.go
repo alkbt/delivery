@@ -7,22 +7,23 @@
 package courier
 
 import (
-	"delivery/internal/core/domain/model/kernel"
-	"delivery/internal/pkg/errs"
 	"errors"
 	"fmt"
+
+	"delivery/internal/core/domain/model/kernel"
+	"delivery/internal/pkg/errs"
 )
 
 var (
 	// ErrCannotStoreOrderInThisStoragePlace indicates that an order cannot be stored
 	// in the storage place due to insufficient capacity or the place being occupied.
 	ErrCannotStoreOrderInThisStoragePlace = errors.New("cannot store order in this storage place")
-	
+
 	// ErrOrderNotStoredInThisPlace indicates that the specified order is not
 	// currently stored in this storage place, either because the place is empty
 	// or contains a different order.
 	ErrOrderNotStoredInThisPlace = errors.New("order not stored in this place")
-	
+
 	// ErrStoragePlaceIsNotConstructed indicates that the StoragePlace was not
 	// properly initialized through the NewStoragePlace constructor function.
 	ErrStoragePlaceIsNotConstructed = errors.New("StoragePlace must be created via NewStoragePlace constructor")
@@ -66,16 +67,16 @@ var (
 type StoragePlace struct {
 	// id uniquely identifies the storage place
 	id kernel.UUID
-	
+
 	// name is a human-readable identifier for the storage place
 	name string
-	
+
 	// totalVolume represents the maximum volume capacity of the storage place
 	totalVolume int
-	
+
 	// orderID points to the currently stored order, nil if empty
 	orderID *kernel.UUID
-	
+
 	// isConstructed ensures the entity was properly initialized
 	isConstructed bool
 }
