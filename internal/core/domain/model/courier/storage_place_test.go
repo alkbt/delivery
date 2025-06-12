@@ -505,6 +505,15 @@ func TestStoragePlace_Validate(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceIsNotConstructed, err)
 	})
+
+	t.Run("should return error for nil storage place", func(t *testing.T) {
+		var place *courier.StoragePlace
+
+		err := place.Validate()
+
+		assert.Error(t, err)
+		assert.Equal(t, courier.ErrStoragePlaceIsNotConstructed, err)
+	})
 }
 
 func TestStoragePlace_ComplexScenarios(t *testing.T) {

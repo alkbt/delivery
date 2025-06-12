@@ -332,5 +332,8 @@ func (s *StoragePlace) setTotalVolume(totalVolume int) error {
 //	    return fmt.Errorf("invalid storage place: %w", err)
 //	}
 func (s *StoragePlace) Validate() error {
+	if s == nil {
+		return ErrStoragePlaceIsNotConstructed
+	}
 	return s.guard.Validate(ErrStoragePlaceIsNotConstructed)
 }
