@@ -77,8 +77,8 @@ type StoragePlace struct {
 	// orderID points to the currently stored order, nil if empty
 	orderID *kernel.UUID
 
-	// isConstructed ensures the entity was properly initialized
-	isConstructed bool
+	// guard ensures the entity was properly initialized
+	guard kernel.ConstructorGuard
 }
 
 // NewStoragePlace creates a new StoragePlace entity with the specified parameters.
@@ -108,13 +108,14 @@ type StoragePlace struct {
 //	    return fmt.Errorf("failed to create storage place: %w", err)
 //	}
 func NewStoragePlace(id kernel.UUID, name string, totalVolume int) (*StoragePlace, error) {
-	place := &StoragePlace{}
+	place := &StoragePlace{
+		guard: kernel.NewConstructorGuard(),
+	}
 
 	if err := errors.Join(place.setID(id), place.setName(name), place.setTotalVolume(totalVolume)); err != nil {
 		return nil, err
 	}
 
-	place.isConstructed = true
 	return place, nil
 }
 
@@ -331,9 +332,5 @@ func (s *StoragePlace) setTotalVolume(totalVolume int) error {
 //	    return fmt.Errorf("invalid storage place: %w", err)
 //	}
 func (s *StoragePlace) Validate() error {
-	if !s.isConstructed {
-		return ErrStoragePlaceIsNotConstructed
-	}
-
-	return nil
+	return s.guard.Validate(ErrStoragePlaceIsNotConstructed)
 }

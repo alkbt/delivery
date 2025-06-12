@@ -42,8 +42,8 @@ type Order struct {
 	// status represents the current state in the order lifecycle
 	status Status
 
-	// isConstructed ensures the order was created via NewOrder
-	isConstructed bool
+	// guard ensures the order was created via NewOrder
+	guard kernel.ConstructorGuard
 }
 
 // NewOrder creates a new Order instance with validation. This is the only way to create
@@ -71,8 +71,8 @@ type Order struct {
 // with Created status and no courier assigned.
 func NewOrder(id kernel.UUID, location kernel.Location, volume int) (*Order, error) {
 	order := &Order{
-		status:        Created,
-		isConstructed: true,
+		status: Created,
+		guard:  kernel.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(
@@ -96,11 +96,11 @@ func NewOrder(id kernel.UUID, location kernel.Location, volume int) (*Order, err
 // This method should be called when reconstructing orders from persistence
 // to ensure data integrity.
 func (o *Order) Validate() error {
-	if o == nil || !o.isConstructed {
+	if o == nil {
 		return ErrOrderIsNotConstructed
 	}
 
-	return nil
+	return o.guard.Validate(ErrOrderIsNotConstructed)
 }
 
 // IsEqual compares two orders by their unique identifiers.
