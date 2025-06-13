@@ -39,9 +39,9 @@ var ErrLocationIsNotConstructed = errs.NewValueIsRequiredError("location must be
 //	}
 //	fmt.Printf("Location: %s", loc) // Output: Location(5,7)
 type Location struct {
-	x             Coordinate
-	y             Coordinate
-	isConstructed bool
+	x     Coordinate
+	y     Coordinate
+	guard ConstructorGuard
 }
 
 // NewLocation creates a new Location with the specified coordinates.
@@ -64,13 +64,14 @@ type Location struct {
 //	}
 //	// loc is now ready to use
 func NewLocation(x Coordinate, y Coordinate) (Location, error) {
-	loc := Location{}
+	loc := Location{
+		guard: NewConstructorGuard(),
+	}
 
 	if err := errors.Join(loc.setX(x), loc.setY(y)); err != nil {
 		return Location{}, err
 	}
 
-	loc.isConstructed = true
 	return loc, nil
 }
 
@@ -114,11 +115,7 @@ func NewRandomLocation() (Location, error) {
 //	    fmt.Println("Location is valid")
 //	}
 func (l Location) Validate() error {
-	if !l.isConstructed {
-		return ErrLocationIsNotConstructed
-	}
-
-	return nil
+	return l.guard.Validate(ErrLocationIsNotConstructed)
 }
 
 // X returns the X coordinate of the location.
