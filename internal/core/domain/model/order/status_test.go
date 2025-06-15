@@ -49,7 +49,7 @@ func TestStatus_Validate(t *testing.T) {
 		for _, status := range validStatuses {
 			t.Run(fmt.Sprintf("should validate %s status", status.String()), func(t *testing.T) {
 				err := status.Validate()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			})
 		}
 	})
@@ -57,7 +57,7 @@ func TestStatus_Validate(t *testing.T) {
 	t.Run("should reject Unknown status", func(t *testing.T) {
 		err := order.Unknown.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
 		assert.Contains(t, err.Error(), "0 is not a valid status")
@@ -75,7 +75,7 @@ func TestStatus_Validate(t *testing.T) {
 			t.Run(fmt.Sprintf("should reject status value %d", int(status)), func(t *testing.T) {
 				err := status.Validate()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 				assert.Contains(t, err.Error(), "status is invalid")
 				assert.Contains(t, err.Error(), fmt.Sprintf("%d is not a valid status", int(status)))
@@ -150,7 +150,7 @@ func TestStatus_Assign(t *testing.T) {
 
 		newStatus, err := status.Assign()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.Status(0), newStatus)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
@@ -162,7 +162,7 @@ func TestStatus_Assign(t *testing.T) {
 
 		newStatus, err := status.Assign()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.Status(0), newStatus)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
@@ -180,7 +180,7 @@ func TestStatus_Assign(t *testing.T) {
 			t.Run(fmt.Sprintf("should reject transition from status %d", int(status)), func(t *testing.T) {
 				newStatus, err := status.Assign()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, order.Status(0), newStatus)
 				assert.Contains(t, err.Error(), "is not a valid status to assign")
 			})
@@ -203,7 +203,7 @@ func TestStatus_Complete(t *testing.T) {
 
 		newStatus, err := status.Complete()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.Status(0), newStatus)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
@@ -215,7 +215,7 @@ func TestStatus_Complete(t *testing.T) {
 
 		newStatus, err := status.Complete()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.Status(0), newStatus)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
@@ -227,7 +227,7 @@ func TestStatus_Complete(t *testing.T) {
 
 		newStatus, err := status.Complete()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.Status(0), newStatus)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "status is invalid")
@@ -245,7 +245,7 @@ func TestStatus_Complete(t *testing.T) {
 			t.Run(fmt.Sprintf("should reject transition from status %d", int(status)), func(t *testing.T) {
 				newStatus, err := status.Complete()
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, order.Status(0), newStatus)
 				assert.Contains(t, err.Error(), "is not a valid status to complete")
 			})
@@ -293,18 +293,18 @@ func TestStatus_StateMachine(t *testing.T) {
 		// Test Created -> Completed (should fail)
 		status := order.Created
 		_, err := status.Complete()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Created is not a valid status to complete")
 
 		// Test Completed -> Assigned (should fail)
 		status = order.Completed
 		_, err = status.Assign()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Completed is not a valid status to assign")
 
 		// Test Completed -> Completed (should fail)
 		_, err = status.Complete()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Completed is not a valid status to complete")
 	})
 }
@@ -328,7 +328,7 @@ func TestStatus_Immutability(t *testing.T) {
 
 		// Attempt invalid transition
 		_, err := originalStatus.Assign()
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		// Original should be unchanged
 		assert.Equal(t, order.Completed, originalStatus)
@@ -341,7 +341,7 @@ func TestStatus_EdgeCases(t *testing.T) {
 
 		assert.Equal(t, order.Unknown, status)
 		assert.Equal(t, "Unknown", status.String())
-		assert.Error(t, status.Validate())
+		require.Error(t, status.Validate())
 	})
 
 	t.Run("should handle type conversion edge cases", func(t *testing.T) {
@@ -349,24 +349,24 @@ func TestStatus_EdgeCases(t *testing.T) {
 		status := order.Status(1)
 		assert.Equal(t, order.Created, status)
 		assert.Equal(t, "Created", status.String())
-		assert.NoError(t, status.Validate())
+		require.NoError(t, status.Validate())
 
 		// Test conversion from invalid int
 		invalidStatus := order.Status(999)
 		assert.Equal(t, "Unknown", invalidStatus.String())
-		assert.Error(t, invalidStatus.Validate())
+		require.Error(t, invalidStatus.Validate())
 	})
 
 	t.Run("should handle boundary values", func(t *testing.T) {
 		// Test just below valid range
 		belowRange := order.Status(-1)
 		assert.Equal(t, "Unknown", belowRange.String())
-		assert.Error(t, belowRange.Validate())
+		require.Error(t, belowRange.Validate())
 
 		// Test just above valid range
 		aboveRange := order.Status(4)
 		assert.Equal(t, "Unknown", aboveRange.String())
-		assert.Error(t, aboveRange.Validate())
+		require.Error(t, aboveRange.Validate())
 	})
 }
 
@@ -399,12 +399,12 @@ func TestStatus_Documentation(t *testing.T) {
 		// Invalid path: Created -> Completed (should fail)
 		status = order.Created
 		_, err = status.Complete()
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		// Invalid path: Completed -> Assigned (should fail)
 		status = order.Completed
 		_, err = status.Assign()
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -427,9 +427,9 @@ func TestStatus_Consistency(t *testing.T) {
 				err := status.Validate()
 
 				if str == "Unknown" {
-					assert.Error(t, err, "status with String() 'Unknown' should fail validation")
+					require.Error(t, err, "status with String() 'Unknown' should fail validation")
 				} else {
-					assert.NoError(t, err, "status with valid String() should pass validation")
+					require.NoError(t, err, "status with valid String() should pass validation")
 				}
 			})
 		}
@@ -452,4 +452,3 @@ func TestStatus_Consistency(t *testing.T) {
 		assert.Equal(t, order.Completed, newStatus)
 	})
 }
-

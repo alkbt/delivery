@@ -25,7 +25,8 @@ const (
 
 // ErrLocationIsNotConstructed is returned when attempting to use an improperly initialized Location.
 // Locations must be created using NewLocation or NewRandomLocation constructors to ensure validity.
-var ErrLocationIsNotConstructed = errs.NewValueIsRequiredError("location must be created via NewLocation or NewRandomLocation constructors")
+var ErrLocationIsNotConstructed = errs.NewValueIsRequiredError(
+	"location must be created via NewLocation or NewRandomLocation constructors")
 
 // Location represents a point on the delivery grid with validated coordinates.
 // Location is an immutable value object that ensures coordinates are always within valid bounds.
@@ -38,7 +39,7 @@ var ErrLocationIsNotConstructed = errs.NewValueIsRequiredError("location must be
 //	    // Handle validation error
 //	}
 //	fmt.Printf("Location: %s", loc) // Output: Location(5,7)
-type Location struct {
+type Location struct { //nolint:recvcheck //using for validation
 	x     Coordinate
 	y     Coordinate
 	guard ConstructorGuard
@@ -91,8 +92,8 @@ func NewLocation(x Coordinate, y Coordinate) (Location, error) {
 //	}
 //	fmt.Printf("Random location: %s", loc)
 func NewRandomLocation() (Location, error) {
-	x := Coordinate(rand.IntN(int(LocationMaxX-LocationMinX+1)) + int(LocationMinX))
-	y := Coordinate(rand.IntN(int(LocationMaxY-LocationMinY+1)) + int(LocationMinY))
+	x := Coordinate(rand.IntN(int(LocationMaxX-LocationMinX+1)) + int(LocationMinX)) //nolint:gosec // it's ok
+	y := Coordinate(rand.IntN(int(LocationMaxY-LocationMinY+1)) + int(LocationMinY)) //nolint:gosec // it's ok
 	return NewLocation(x, y)
 }
 

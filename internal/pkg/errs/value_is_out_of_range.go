@@ -16,22 +16,24 @@ type ValueIsOutOfRangeError struct {
 	Cause     error
 }
 
-func NewValueIsOutOfRangeErrorWithCause(paramName string, value any, min any, max any, cause error) *ValueIsOutOfRangeError {
+func NewValueIsOutOfRangeErrorWithCause(
+	paramName string, value any, minVal any, maxVal any, cause error,
+) *ValueIsOutOfRangeError {
 	return &ValueIsOutOfRangeError{
 		ParamName: paramName,
 		Value:     value,
-		Min:       min,
-		Max:       max,
+		Min:       minVal,
+		Max:       maxVal,
 		Cause:     cause,
 	}
 }
 
-func NewValueIsOutOfRangeError(paramName string, value any, min any, max any) *ValueIsOutOfRangeError {
+func NewValueIsOutOfRangeError(paramName string, value any, minVal any, maxVal any) *ValueIsOutOfRangeError {
 	return &ValueIsOutOfRangeError{
 		ParamName: paramName,
 		Value:     value,
-		Min:       min,
-		Max:       max,
+		Min:       minVal,
+		Max:       maxVal,
 	}
 }
 

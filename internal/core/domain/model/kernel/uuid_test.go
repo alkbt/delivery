@@ -15,7 +15,7 @@ func TestNewUUID(t *testing.T) {
 		id := kernel.NewUUID()
 
 		assert.NotEmpty(t, id.String())
-		assert.NoError(t, id.Validate())
+		require.NoError(t, id.Validate())
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", id.String())
 	})
 
@@ -36,7 +36,7 @@ func TestUUIDFromString(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, validUUID, id.String())
-		assert.NoError(t, id.Validate())
+		require.NoError(t, id.Validate())
 	})
 
 	t.Run("should accept UUID with braces", func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestUUIDFromString(t *testing.T) {
 
 		for _, tc := range testCases {
 			_, err := kernel.UUIDFromString(tc.input)
-			assert.Error(t, err, "expected error for input: %s", tc.input)
+			require.Error(t, err, "expected error for input: %s", tc.input)
 			assert.Contains(t, err.Error(), tc.expected)
 		}
 	})
@@ -95,14 +95,14 @@ func TestUUIDFromBytes(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", id.String())
-		assert.NoError(t, id.Validate())
+		require.NoError(t, id.Validate())
 	})
 
 	t.Run("should return error for invalid byte length", func(t *testing.T) {
 		invalidBytes := []byte{0x55, 0x0e, 0x84}
 		_, err := kernel.UUIDFromBytes(invalidBytes)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid UUID format")
 	})
 
@@ -113,7 +113,7 @@ func TestUUIDFromBytes(t *testing.T) {
 		}
 		_, err := kernel.UUIDFromBytes(nilBytes)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 	})
 }
@@ -129,8 +129,10 @@ func TestUUID_String(t *testing.T) {
 	t.Run("should return consistent string representation", func(t *testing.T) {
 		id, _ := kernel.UUIDFromString("550e8400-e29b-41d4-a716-446655440000")
 
-		assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", id.String())
-		assert.Equal(t, id.String(), id.String())
+		str1 := id.String()
+		str2 := id.String()
+		assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", str1)
+		assert.Equal(t, str1, str2)
 	})
 }
 
@@ -174,14 +176,14 @@ func TestUUID_IsEqual(t *testing.T) {
 func TestUUID_Validate(t *testing.T) {
 	t.Run("should return nil for valid UUID", func(t *testing.T) {
 		id := kernel.NewUUID()
-		assert.NoError(t, id.Validate())
+		require.NoError(t, id.Validate())
 	})
 
 	t.Run("should return error for zero value UUID", func(t *testing.T) {
 		var id kernel.UUID
 		err := id.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 	})
 
@@ -189,7 +191,7 @@ func TestUUID_Validate(t *testing.T) {
 		id, _ := kernel.UUIDFromString("00000000-0000-0000-0000-000000000000")
 		err := id.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 	})
 }
@@ -204,13 +206,13 @@ func TestUUID_UsageInStruct(t *testing.T) {
 			ID: kernel.NewUUID(),
 		}
 
-		assert.NoError(t, order.ID.Validate())
+		require.NoError(t, order.ID.Validate())
 		assert.NotEmpty(t, order.ID.String())
 	})
 
 	t.Run("should detect uninitialized field", func(t *testing.T) {
 		var order Order
-		assert.Error(t, order.ID.Validate())
+		require.Error(t, order.ID.Validate())
 	})
 }
 
@@ -228,10 +230,9 @@ func TestUUID_Immutability(t *testing.T) {
 
 		// Verify the original UUID is unchanged
 		assert.Equal(t, originalString, original.String())
-		assert.NoError(t, original.Validate())
+		require.NoError(t, original.Validate())
 
 		// The modified bytes should create a different UUID
-		modifiedUUID := uuid.UUID(bytes)
-		assert.NotEqual(t, original.String(), modifiedUUID.String())
+		assert.NotEqual(t, original.String(), bytes.String())
 	})
 }

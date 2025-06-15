@@ -1,11 +1,10 @@
 package courier
 
 import (
-	"errors"
-
 	"delivery/internal/core/domain/model/kernel"
 	"delivery/internal/core/domain/model/order"
 	"delivery/internal/pkg/errs"
+	"errors"
 )
 
 const (
@@ -103,7 +102,7 @@ func NewCourier(id kernel.UUID, name string, speed int, location kernel.Location
 	}
 
 	if err := errors.Join(
-		courier.setId(id),
+		courier.setID(id),
 		courier.setName(name),
 		courier.setSpeed(speed),
 		courier.setLocation(location),
@@ -479,25 +478,25 @@ func (c *Courier) Move(target kernel.Location) error {
 		return nil
 	}
 
-	steps := min(c.speed, distance)
+	steps := minInt(c.speed, distance)
 	curX, curY := c.location.X(), c.location.Y()
 	tgtX, tgtY := target.X(), target.Y()
 
 	// Move along X axis first
-	moveX := min(steps, int(abs(tgtX-curX)))
+	moveX := minInt(steps, int(abs(tgtX-curX)))
 	if curX < tgtX {
-		curX += kernel.Coordinate(moveX)
+		curX += kernel.Coordinate(moveX) //nolint:gosec // it's ok
 	} else if curX > tgtX {
-		curX -= kernel.Coordinate(moveX)
+		curX -= kernel.Coordinate(moveX) //nolint:gosec  // it's ok
 	}
 	steps -= moveX
 
 	// Then move along Y axis
-	moveY := min(steps, int(abs(tgtY-curY)))
+	moveY := minInt(steps, int(abs(tgtY-curY)))
 	if curY < tgtY {
-		curY += kernel.Coordinate(moveY)
+		curY += kernel.Coordinate(moveY) //nolint:gosec  // it's ok
 	} else if curY > tgtY {
-		curY -= kernel.Coordinate(moveY)
+		curY -= kernel.Coordinate(moveY) //nolint:gosec  // it's ok
 	}
 
 	newLocation, err := kernel.NewLocation(curX, curY)
@@ -534,7 +533,7 @@ func (c *Courier) findStorageForVolume(volume int) (*StoragePlace, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, nil //nolint:nilnil // nothing is found and no error
 }
 
 // findStoragePlaceByOrderID locates the storage place containing a specific order.
@@ -562,9 +561,9 @@ func (c *Courier) findStoragePlaceByOrderID(orderID kernel.UUID) (*StoragePlace,
 	return nil, ErrStoragePlaceNotFound
 }
 
-// setId sets the courier's unique identifier with validation.
+// setID sets the courier's unique identifier with validation.
 // This is an internal setter used during courier construction.
-func (c *Courier) setId(id kernel.UUID) error {
+func (c *Courier) setID(id kernel.UUID) error {
 	if err := id.Validate(); err != nil {
 		return err
 	}
@@ -606,9 +605,9 @@ func (c *Courier) setLocation(location kernel.Location) error {
 	return nil
 }
 
-// min returns the smaller of two integers.
+// minInt returns the smaller of two integers.
 // This is a utility function used in movement calculations.
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

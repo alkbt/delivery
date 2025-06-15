@@ -17,13 +17,13 @@ func TestNewConstructorGuard(t *testing.T) {
 
 		// Then
 		assert.NotNil(t, guard)
-		
+
 		// Test with custom error
 		customError := errors.New("test object not constructed")
-		assert.NoError(t, guard.Validate(customError))
-		
+		require.NoError(t, guard.Validate(customError))
+
 		// Test with nil error (should use default)
-		assert.NoError(t, guard.Validate(nil))
+		require.NoError(t, guard.Validate(nil))
 	})
 }
 
@@ -37,7 +37,7 @@ func TestConstructorGuard_Validate(t *testing.T) {
 		err := guard.Validate(customError)
 
 		// Then
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("zero_value_guard_returns_custom_error", func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestConstructorGuard_Validate(t *testing.T) {
 		err := guard.Validate(expectedError)
 
 		// Then
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, expectedError, err)
 	})
 
@@ -61,13 +61,13 @@ func TestConstructorGuard_Validate(t *testing.T) {
 		err := guard.Validate(nil)
 
 		// Then
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrDefaultConstructorGuard, err)
 	})
 }
 
 // TestConstructorGuardUsageExample demonstrates how ConstructorGuard should be used
-// in a domain object to enforce constructor usage
+// in a domain object to enforce constructor usage.
 func TestConstructorGuardUsageExample(t *testing.T) {
 	// Define a sample domain object that uses ConstructorGuard
 	type Money struct {
@@ -76,9 +76,9 @@ func TestConstructorGuardUsageExample(t *testing.T) {
 		guard    kernel.ConstructorGuard
 	}
 
-	var ErrMoneyNotConstructed = errors.New("Money must be created via NewMoney")
+	var errMoneyNotConstructed = errors.New("Money must be created via NewMoney")
 
-	NewMoney := func(amount int, currency string) (Money, error) {
+	newMoney := func(amount int, currency string) (Money, error) {
 		if amount < 0 {
 			return Money{}, errors.New("amount cannot be negative")
 		}
@@ -92,17 +92,17 @@ func TestConstructorGuardUsageExample(t *testing.T) {
 		}, nil
 	}
 
-	ValidateMoney := func(m Money) error {
-		return m.guard.Validate(ErrMoneyNotConstructed)
+	validateMoney := func(m Money) error {
+		return m.guard.Validate(errMoneyNotConstructed)
 	}
 
 	t.Run("valid_construction_through_constructor", func(t *testing.T) {
 		// When
-		money, err := NewMoney(100, "USD")
+		money, err := newMoney(100, "USD")
 
 		// Then
 		require.NoError(t, err)
-		assert.NoError(t, ValidateMoney(money))
+		require.NoError(t, validateMoney(money))
 		assert.Equal(t, 100, money.amount)
 		assert.Equal(t, "USD", money.currency)
 	})
@@ -112,31 +112,31 @@ func TestConstructorGuardUsageExample(t *testing.T) {
 		var money Money // zero value
 
 		// When
-		err := ValidateMoney(money)
+		err := validateMoney(money)
 
 		// Then
 		// Zero value Money has zero value guard which returns the error we pass
-		assert.Error(t, err)
-		assert.Equal(t, ErrMoneyNotConstructed, err)
+		require.Error(t, err)
+		assert.Equal(t, errMoneyNotConstructed, err)
 	})
 
 	t.Run("constructor_validates_business_rules", func(t *testing.T) {
 		// Test negative amount
-		_, err := NewMoney(-100, "USD")
-		assert.Error(t, err)
+		_, err := newMoney(-100, "USD")
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "amount cannot be negative")
 
 		// Test empty currency
-		_, err = NewMoney(100, "")
-		assert.Error(t, err)
+		_, err = newMoney(100, "")
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "currency is required")
 	})
 }
 
-// TestConstructorGuardRealWorldExample shows a better pattern using embedded types
+// TestConstructorGuardRealWorldExample shows a better pattern using embedded types.
 func TestConstructorGuardRealWorldExample(t *testing.T) {
 	// Define error once
-	var ErrProductNotConstructed = errors.New("Product must be created via NewProduct")
+	var errProductNotConstructed = errors.New("Product must be created via NewProduct")
 
 	// Define a guard-aware base type
 	type guardedProduct struct {
@@ -150,7 +150,7 @@ func TestConstructorGuardRealWorldExample(t *testing.T) {
 	}
 
 	validateGuardedProduct := func(g guardedProduct) error {
-		return g.guard.Validate(ErrProductNotConstructed)
+		return g.guard.Validate(errProductNotConstructed)
 	}
 
 	// Define the actual domain object
@@ -161,7 +161,7 @@ func TestConstructorGuardRealWorldExample(t *testing.T) {
 		price int
 	}
 
-	NewProduct := func(id, name string, price int) (Product, error) {
+	newProduct := func(id, name string, price int) (Product, error) {
 		if id == "" {
 			return Product{}, errors.New("product ID is required")
 		}
@@ -181,11 +181,11 @@ func TestConstructorGuardRealWorldExample(t *testing.T) {
 
 	t.Run("valid_product_construction", func(t *testing.T) {
 		// When
-		product, err := NewProduct("123", "Laptop", 999)
+		product, err := newProduct("123", "Laptop", 999)
 
 		// Then
 		require.NoError(t, err)
-		assert.NoError(t, validateGuardedProduct(product.guardedProduct))
+		require.NoError(t, validateGuardedProduct(product.guardedProduct))
 		assert.Equal(t, "123", product.id)
 		assert.Equal(t, "Laptop", product.name)
 		assert.Equal(t, 999, product.price)
@@ -200,13 +200,13 @@ func TestConstructorGuardRealWorldExample(t *testing.T) {
 
 		// Then
 		// Zero value has zero value guard which returns the error we pass
-		assert.Error(t, err)
-		assert.Equal(t, ErrProductNotConstructed, err)
+		require.Error(t, err)
+		assert.Equal(t, errProductNotConstructed, err)
 	})
 }
 
 // TestConstructorGuardWithMultipleErrors demonstrates using ConstructorGuard
-// with different error types and messages
+// with different error types and messages.
 func TestConstructorGuardWithMultipleErrors(t *testing.T) {
 	testCases := []struct {
 		name          string
@@ -239,12 +239,12 @@ func TestConstructorGuardWithMultipleErrors(t *testing.T) {
 			err := guard.Validate(tc.expectedError)
 
 			// Then
-			assert.NoError(t, err, "Properly constructed guard should not return error")
+			require.NoError(t, err, "Properly constructed guard should not return error")
 		})
 	}
 }
 
-// TestConstructorGuardDefaultError verifies the default error behavior
+// TestConstructorGuardDefaultError verifies the default error behavior.
 func TestConstructorGuardDefaultError(t *testing.T) {
 	t.Run("nil_error_uses_default_for_zero_value", func(t *testing.T) {
 		// Given
@@ -254,23 +254,23 @@ func TestConstructorGuardDefaultError(t *testing.T) {
 		err := guard.Validate(nil)
 
 		// Then
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrDefaultConstructorGuard, err)
 	})
 
 	t.Run("default_error_constant_has_meaningful_message", func(t *testing.T) {
 		// Then
-		assert.NotNil(t, kernel.ErrDefaultConstructorGuard)
+		require.Error(t, kernel.ErrDefaultConstructorGuard)
 		assert.Contains(t, kernel.ErrDefaultConstructorGuard.Error(), "constructor")
 		assert.Equal(t, "object must be created via its constructor", kernel.ErrDefaultConstructorGuard.Error())
 	})
 }
 
-// BenchmarkConstructorGuard measures the performance overhead of using ConstructorGuard
+// BenchmarkConstructorGuard measures the performance overhead of using ConstructorGuard.
 func BenchmarkConstructorGuard(b *testing.B) {
 	b.Run("NewConstructorGuard", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = kernel.NewConstructorGuard()
 		}
 	})
@@ -279,7 +279,7 @@ func BenchmarkConstructorGuard(b *testing.B) {
 		guard := kernel.NewConstructorGuard()
 		err := errors.New("not constructed")
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = guard.Validate(err)
 		}
 	})
@@ -288,36 +288,36 @@ func BenchmarkConstructorGuard(b *testing.B) {
 		var guard kernel.ConstructorGuard
 		err := errors.New("not constructed")
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = guard.Validate(err)
 		}
 	})
 }
 
-// TestConstructorGuardConcurrency verifies that ConstructorGuard is safe for concurrent use
+// TestConstructorGuardConcurrency verifies that ConstructorGuard is safe for concurrent use.
 func TestConstructorGuardConcurrency(t *testing.T) {
 	guard := kernel.NewConstructorGuard()
 	validationError := errors.New("not constructed")
-	
+
 	// Run multiple goroutines that validate the guard concurrently
 	done := make(chan bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		go func() {
-			for j := 0; j < 1000; j++ {
+			for range 1000 {
 				err := guard.Validate(validationError)
 				assert.NoError(t, err)
 			}
 			done <- true
 		}()
 	}
-	
+
 	// Wait for all goroutines to complete
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		<-done
 	}
 }
 
-// TestConstructorGuardImmutability verifies that ConstructorGuard is immutable
+// TestConstructorGuardImmutability verifies that ConstructorGuard is immutable.
 func TestConstructorGuardImmutability(t *testing.T) {
 	t.Run("guard_fields_are_not_modifiable", func(t *testing.T) {
 		// Given
@@ -331,8 +331,8 @@ func TestConstructorGuardImmutability(t *testing.T) {
 
 		// Then
 		// Original guard should still validate successfully
-		assert.NoError(t, guard.Validate(originalError))
-		assert.NoError(t, guard.Validate(anotherError))
+		require.NoError(t, guard.Validate(originalError))
+		require.NoError(t, guard.Validate(anotherError))
 	})
 
 	t.Run("guard_can_be_safely_passed_by_value", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestConstructorGuardImmutability(t *testing.T) {
 		guardCopy := guard // Pass by value
 
 		// Then
-		assert.NoError(t, guard.Validate(testError))
-		assert.NoError(t, guardCopy.Validate(testError))
+		require.NoError(t, guard.Validate(testError))
+		require.NoError(t, guardCopy.Validate(testError))
 	})
 }

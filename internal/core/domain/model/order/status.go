@@ -39,12 +39,26 @@ const (
 	Completed
 )
 
-// statusStrings maps Status values to their string representations.
+// getStatusStrings returns a map of Status values to their string representations.
+// All statuses are included for string conversion.
+func getStatusStrings() map[Status]string {
+	return map[Status]string{
+		Unknown:   "Unknown",
+		Created:   "Created",
+		Assigned:  "Assigned",
+		Completed: "Completed",
+	}
+}
+
+// getValidStatusStrings returns a map of only valid Status values.
 // Only valid statuses are included to support validation.
-var statusStrings = map[Status]string{
-	Created:   "Created",
-	Assigned:  "Assigned",
-	Completed: "Completed",
+func getValidStatusStrings() map[Status]string {
+	//nolint:exhaustive // Unknown is intentionally excluded as it's invalid
+	return map[Status]string{
+		Created:   "Created",
+		Assigned:  "Assigned",
+		Completed: "Completed",
+	}
 }
 
 // Validate checks if the Status value is valid.
@@ -59,7 +73,7 @@ var statusStrings = map[Status]string{
 // This method is used to ensure Status values from external sources
 // (e.g., database, API) are valid before use.
 func (s Status) Validate() error {
-	if _, ok := statusStrings[s]; !ok {
+	if _, ok := getValidStatusStrings()[s]; !ok {
 		return errs.NewValueIsInvalidErrorWithCause("status is invalid", fmt.Errorf("%d is not a valid status", s))
 	}
 	return nil
@@ -78,7 +92,7 @@ func (s Status) Validate() error {
 //
 //	fmt.Println(order.Status()) // Output: "Assigned"
 func (s Status) String() string {
-	if str, ok := statusStrings[s]; ok {
+	if str, ok := getStatusStrings()[s]; ok {
 		return str
 	}
 	return "Unknown"
@@ -108,7 +122,10 @@ func (s Status) String() string {
 //	}
 func (s Status) Assign() (Status, error) {
 	if s != Created && s != Assigned {
-		return 0, errs.NewValueIsInvalidErrorWithCause("status is invalid", fmt.Errorf("%s is not a valid status to assign", s.String()))
+		return 0, errs.NewValueIsInvalidErrorWithCause(
+			"status is invalid",
+			fmt.Errorf("%s is not a valid status to assign", s.String()),
+		)
 	}
 
 	return Assigned, nil
@@ -139,7 +156,10 @@ func (s Status) Assign() (Status, error) {
 //	}
 func (s Status) Complete() (Status, error) {
 	if s != Assigned {
-		return 0, errs.NewValueIsInvalidErrorWithCause("status is invalid", fmt.Errorf("%s is not a valid status to complete", s.String()))
+		return 0, errs.NewValueIsInvalidErrorWithCause(
+			"status is invalid",
+			fmt.Errorf("%s is not a valid status to complete", s.String()),
+		)
 	}
 
 	return Completed, nil

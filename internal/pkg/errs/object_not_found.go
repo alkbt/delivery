@@ -13,18 +13,18 @@ type ObjectNotFoundError struct {
 	Cause     error
 }
 
-func NewObjectNotFoundErrorWithCause(paramName string, ID string, cause error) *ObjectNotFoundError {
+func NewObjectNotFoundErrorWithCause(paramName string, id string, cause error) *ObjectNotFoundError {
 	return &ObjectNotFoundError{
 		ParamName: paramName,
-		ID:        ID,
+		ID:        id,
 		Cause:     cause,
 	}
 }
 
-func NewObjectNotFoundError(paramName string, ID any) *ObjectNotFoundError {
+func NewObjectNotFoundError(paramName string, id any) *ObjectNotFoundError {
 	return &ObjectNotFoundError{
 		ParamName: paramName,
-		ID:        ID,
+		ID:        id,
 	}
 }
 

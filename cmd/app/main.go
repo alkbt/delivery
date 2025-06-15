@@ -3,11 +3,12 @@ package main
 import (
 	"delivery/cmd"
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -16,18 +17,18 @@ func main() {
 	app := cmd.NewCompositionRoot(
 		configs,
 	)
-	startWebServer(app, configs.HttpPort)
+	startWebServer(app, configs.HTTPPort)
 }
 
 func getConfigs() cmd.Config {
 	config := cmd.Config{
-		HttpPort:                  goDotEnvVariable("HTTP_PORT"),
-		DbHost:                    goDotEnvVariable("DB_HOST"),
-		DbPort:                    goDotEnvVariable("DB_PORT"),
-		DbUser:                    goDotEnvVariable("DB_USER"),
-		DbPassword:                goDotEnvVariable("DB_PASSWORD"),
-		DbName:                    goDotEnvVariable("DB_NAME"),
-		DbSslMode:                 goDotEnvVariable("DB_SSLMODE"),
+		HTTPPort:                  goDotEnvVariable("HTTP_PORT"),
+		DBHost:                    goDotEnvVariable("DB_HOST"),
+		DBPort:                    goDotEnvVariable("DB_PORT"),
+		DBUser:                    goDotEnvVariable("DB_USER"),
+		DBPassword:                goDotEnvVariable("DB_PASSWORD"),
+		DBName:                    goDotEnvVariable("DB_NAME"),
+		DBSslMode:                 goDotEnvVariable("DB_SSLMODE"),
 		GeoServiceGrpcHost:        goDotEnvVariable("GEO_SERVICE_GRPC_HOST"),
 		KafkaHost:                 goDotEnvVariable("KAFKA_HOST"),
 		KafkaConsumerGroup:        goDotEnvVariable("KAFKA_CONSUMER_GROUP"),
@@ -52,5 +53,4 @@ func startWebServer(_ cmd.CompositionRoot, port string) {
 	})
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%s", port)))
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }

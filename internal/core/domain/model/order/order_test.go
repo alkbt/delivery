@@ -21,7 +21,7 @@ func TestNewOrder(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, o)
-		assert.NoError(t, o.Validate())
+		require.NoError(t, o.Validate())
 		assert.True(t, o.ID().IsEqual(validID))
 		assert.Equal(t, validLocation, o.Location())
 		assert.Equal(t, validVolume, o.Volume())
@@ -34,7 +34,7 @@ func TestNewOrder(t *testing.T) {
 
 		o, err := order.NewOrder(invalidID, validLocation, validVolume)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, o)
 		assert.Contains(t, err.Error(), "UUID must be created")
 	})
@@ -44,7 +44,7 @@ func TestNewOrder(t *testing.T) {
 
 		o, err := order.NewOrder(validID, invalidLocation, validVolume)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, o)
 		assert.Contains(t, err.Error(), "location must be created")
 	})
@@ -52,7 +52,7 @@ func TestNewOrder(t *testing.T) {
 	t.Run("should fail with zero volume", func(t *testing.T) {
 		o, err := order.NewOrder(validID, validLocation, 0)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, o)
 		assert.Contains(t, err.Error(), "volume is invalid")
 		assert.Contains(t, err.Error(), "0 is not greater than 0")
@@ -61,7 +61,7 @@ func TestNewOrder(t *testing.T) {
 	t.Run("should fail with negative volume", func(t *testing.T) {
 		o, err := order.NewOrder(validID, validLocation, -50)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, o)
 		assert.Contains(t, err.Error(), "volume is invalid")
 		assert.Contains(t, err.Error(), "-50 is not greater than 0")
@@ -73,7 +73,7 @@ func TestNewOrder(t *testing.T) {
 
 		o, err := order.NewOrder(invalidID, invalidLocation, -1)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, o)
 		// Should contain all validation errors joined
 		assert.Contains(t, err.Error(), "UUID must be created")
@@ -107,7 +107,7 @@ func TestOrder_Validate(t *testing.T) {
 
 		err := o.Validate()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("should fail validation for nil order", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestOrder_Validate(t *testing.T) {
 
 		err := o.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.ErrOrderIsNotConstructed, err)
 	})
 
@@ -124,7 +124,7 @@ func TestOrder_Validate(t *testing.T) {
 
 		err := o.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, order.ErrOrderIsNotConstructed, err)
 	})
 }
@@ -232,7 +232,7 @@ func TestOrder_Assign(t *testing.T) {
 
 		err := o.Assign(invalidCourierID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 		assert.Equal(t, order.Created, o.Status()) // Status unchanged
 		assert.Nil(t, o.Courier())                 // Courier unchanged
@@ -247,7 +247,7 @@ func TestOrder_Assign(t *testing.T) {
 		newCourierID := kernel.NewUUID()
 		err := o.Assign(newCourierID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "Completed is not a valid status to assign")
 		assert.Equal(t, order.Completed, o.Status())   // Status unchanged
@@ -277,7 +277,7 @@ func TestOrder_Complete(t *testing.T) {
 
 		err := o.Complete()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "Created is not a valid status to complete")
 		assert.Equal(t, order.Created, o.Status()) // Status unchanged
@@ -290,7 +290,7 @@ func TestOrder_Complete(t *testing.T) {
 
 		err := o.Complete()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "Completed is not a valid status to complete")
 		assert.Equal(t, order.Completed, o.Status()) // Status unchanged
@@ -325,7 +325,7 @@ func TestOrder_FullWorkflow(t *testing.T) {
 		assert.True(t, o.Courier().IsEqual(courierID))
 
 		// Verify final state
-		assert.NoError(t, o.Validate())
+		require.NoError(t, o.Validate())
 		assert.True(t, o.ID().IsEqual(orderID))
 		equal, _ := o.Location().IsEqual(location)
 		assert.True(t, equal)
@@ -429,7 +429,7 @@ func TestOrder_ConcurrentSafety(t *testing.T) {
 
 		// Simulate concurrent reads
 		done := make(chan bool, 10)
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			go func() {
 				defer func() { done <- true }()
 
@@ -444,12 +444,12 @@ func TestOrder_ConcurrentSafety(t *testing.T) {
 		}
 
 		// Wait for all goroutines to complete
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			<-done
 		}
 
 		// Verify state is still consistent
-		assert.NoError(t, o.Validate())
+		require.NoError(t, o.Validate())
 		assert.Equal(t, order.Assigned, o.Status())
 		assert.True(t, o.Courier().IsEqual(courierID))
 	})
@@ -474,10 +474,9 @@ func TestOrder_ErrorMessages(t *testing.T) {
 
 				_, err := order.NewOrder(orderID, location, tc.volume)
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.expected)
 			})
 		}
 	})
 }
-

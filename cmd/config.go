@@ -1,13 +1,13 @@
 package cmd
 
 type Config struct {
-	HttpPort                  string
-	DbHost                    string
-	DbPort                    string
-	DbUser                    string
-	DbPassword                string
-	DbName                    string
-	DbSslMode                 string
+	HTTPPort                  string
+	DBHost                    string
+	DBPort                    string
+	DBUser                    string
+	DBPassword                string
+	DBName                    string
+	DBSslMode                 string
 	GeoServiceGrpcHost        string
 	KafkaHost                 string
 	KafkaConsumerGroup        string

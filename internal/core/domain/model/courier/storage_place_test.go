@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test helper functions
+// Test helper functions.
 func createValidStoragePlace(t *testing.T) *courier.StoragePlace {
 	t.Helper()
 	place, err := courier.NewStoragePlace(
@@ -44,7 +44,7 @@ func TestNewStoragePlace(t *testing.T) {
 		assert.Equal(t, validName, place.Name())
 		assert.Equal(t, validVolume, place.TotalVolume())
 		assert.Nil(t, place.OrderID())
-		assert.NoError(t, place.Validate())
+		require.NoError(t, place.Validate())
 	})
 
 	t.Run("should return error for invalid UUID", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestNewStoragePlace(t *testing.T) {
 
 		place, err := courier.NewStoragePlace(invalidID, validName, validVolume)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, place)
 		assert.Contains(t, err.Error(), kernel.ErrUUIDIsNotConstructed.Error())
 	})
@@ -60,7 +60,7 @@ func TestNewStoragePlace(t *testing.T) {
 	t.Run("should return error for empty name", func(t *testing.T) {
 		place, err := courier.NewStoragePlace(validID, "", validVolume)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, place)
 		assert.Contains(t, err.Error(), "name is required")
 	})
@@ -68,7 +68,7 @@ func TestNewStoragePlace(t *testing.T) {
 	t.Run("should return error for zero volume", func(t *testing.T) {
 		place, err := courier.NewStoragePlace(validID, validName, 0)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, place)
 		assert.Contains(t, err.Error(), "totalVolume is invalid")
 	})
@@ -76,7 +76,7 @@ func TestNewStoragePlace(t *testing.T) {
 	t.Run("should return error for negative volume", func(t *testing.T) {
 		place, err := courier.NewStoragePlace(validID, validName, -100)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, place)
 		assert.Contains(t, err.Error(), "totalVolume is invalid")
 	})
@@ -86,7 +86,7 @@ func TestNewStoragePlace(t *testing.T) {
 
 		place, err := courier.NewStoragePlace(invalidID, "", -100)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, place)
 
 		// Verify that all three validation errors are included
@@ -112,10 +112,10 @@ func TestNewStoragePlace(t *testing.T) {
 				place, err := courier.NewStoragePlace(validID, validName, tc.volume)
 
 				if tc.shouldError {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Nil(t, place)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, place)
 					assert.Equal(t, tc.volume, place.TotalVolume())
 				}
@@ -183,8 +183,8 @@ func TestStoragePlace_Getters(t *testing.T) {
 
 	t.Run("should return order ID when occupied", func(t *testing.T) {
 		orderID := createValidOrderID(t)
-		err := place.Store(orderID, 500)
-		require.NoError(t, err)
+		storeErr := place.Store(orderID, 500)
+		require.NoError(t, storeErr)
 
 		storedOrderID := place.OrderID()
 		require.NotNil(t, storedOrderID)
@@ -198,28 +198,28 @@ func TestStoragePlace_CanStore(t *testing.T) {
 	t.Run("should return true for valid volume in empty place", func(t *testing.T) {
 		canStore, err := place.CanStore(500)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, canStore)
 	})
 
 	t.Run("should return true for volume equal to capacity", func(t *testing.T) {
 		canStore, err := place.CanStore(1000)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, canStore)
 	})
 
 	t.Run("should return false for volume exceeding capacity", func(t *testing.T) {
 		canStore, err := place.CanStore(1500)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, canStore)
 	})
 
 	t.Run("should return error for zero volume", func(t *testing.T) {
 		canStore, err := place.CanStore(0)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.False(t, canStore)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 		assert.Contains(t, err.Error(), "volume is invalid")
@@ -228,7 +228,7 @@ func TestStoragePlace_CanStore(t *testing.T) {
 	t.Run("should return error for negative volume", func(t *testing.T) {
 		canStore, err := place.CanStore(-100)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.False(t, canStore)
 		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 	})
@@ -242,7 +242,7 @@ func TestStoragePlace_CanStore(t *testing.T) {
 		// Try to check if another order can be stored
 		canStore, err := place.CanStore(200)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, canStore)
 	})
 
@@ -268,10 +268,10 @@ func TestStoragePlace_CanStore(t *testing.T) {
 				canStore, err := emptyPlace.CanStore(tc.volume)
 
 				if tc.shouldError {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.False(t, canStore)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Equal(t, tc.expected, canStore)
 				}
 			})
@@ -286,7 +286,7 @@ func TestStoragePlace_Store(t *testing.T) {
 
 		err := place.Store(orderID, 500)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, place.OrderID())
 		assert.True(t, place.OrderID().IsEqual(orderID))
 	})
@@ -297,7 +297,7 @@ func TestStoragePlace_Store(t *testing.T) {
 
 		err := place.Store(orderID, 1000)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, place.OrderID())
 		assert.True(t, place.OrderID().IsEqual(orderID))
 	})
@@ -308,7 +308,7 @@ func TestStoragePlace_Store(t *testing.T) {
 
 		err := place.Store(invalidOrderID, 500)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 		assert.Nil(t, place.OrderID())
 	})
@@ -329,7 +329,7 @@ func TestStoragePlace_Store(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				err := place.Store(orderID, tc.volume)
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.IsType(t, &errs.ValueIsInvalidError{}, err)
 				assert.Nil(t, place.OrderID())
 			})
@@ -342,7 +342,7 @@ func TestStoragePlace_Store(t *testing.T) {
 
 		err := place.Store(orderID, 1500)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrCannotStoreOrderInThisStoragePlace, err)
 		assert.Nil(t, place.OrderID())
 	})
@@ -359,7 +359,7 @@ func TestStoragePlace_Store(t *testing.T) {
 		// Try to store second order
 		err = place.Store(secondOrderID, 200)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrCannotStoreOrderInThisStoragePlace, err)
 		// Verify first order is still stored
 		assert.True(t, place.OrderID().IsEqual(firstOrderID))
@@ -387,11 +387,11 @@ func TestStoragePlace_Store(t *testing.T) {
 				err := place.Store(orderID, tc.volume)
 
 				if tc.shouldError {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Equal(t, tc.errorType, err)
 					assert.Nil(t, place.OrderID())
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, place.OrderID())
 					assert.True(t, place.OrderID().IsEqual(orderID))
 				}
@@ -413,7 +413,7 @@ func TestStoragePlace_Clear(t *testing.T) {
 		// Clear the order
 		err = place.Clear(orderID)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Nil(t, place.OrderID())
 	})
 
@@ -429,7 +429,7 @@ func TestStoragePlace_Clear(t *testing.T) {
 		// Try to clear with invalid ID
 		err = place.Clear(invalidOrderID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrUUIDIsNotConstructed, err)
 		// Verify order is still stored
 		assert.NotNil(t, place.OrderID())
@@ -442,7 +442,7 @@ func TestStoragePlace_Clear(t *testing.T) {
 
 		err := place.Clear(orderID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrOrderNotStoredInThisPlace, err)
 		assert.Nil(t, place.OrderID())
 	})
@@ -459,7 +459,7 @@ func TestStoragePlace_Clear(t *testing.T) {
 		// Try to clear with different order ID
 		err = place.Clear(differentOrderID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrOrderNotStoredInThisPlace, err)
 		// Verify original order is still stored
 		assert.NotNil(t, place.OrderID())
@@ -482,7 +482,7 @@ func TestStoragePlace_Clear(t *testing.T) {
 		// Store second order
 		err = place.Store(secondOrderID, 700)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, place.OrderID())
 		assert.True(t, place.OrderID().IsEqual(secondOrderID))
 	})
@@ -494,7 +494,7 @@ func TestStoragePlace_Validate(t *testing.T) {
 
 		err := place.Validate()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("should return error for zero value storage place", func(t *testing.T) {
@@ -502,7 +502,7 @@ func TestStoragePlace_Validate(t *testing.T) {
 
 		err := place.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceIsNotConstructed, err)
 	})
 
@@ -511,7 +511,7 @@ func TestStoragePlace_Validate(t *testing.T) {
 
 		err := place.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceIsNotConstructed, err)
 	})
 }
@@ -547,7 +547,7 @@ func TestStoragePlace_ComplexScenarios(t *testing.T) {
 				// Verify cannot store another order
 				anotherOrderID := createValidOrderID(t)
 				err = place.Store(anotherOrderID, 100)
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, courier.ErrCannotStoreOrderInThisStoragePlace, err)
 
 				// Clear the order
@@ -571,17 +571,17 @@ func TestStoragePlace_ComplexScenarios(t *testing.T) {
 
 		// Invalid store operation
 		err = place.Store(createValidOrderID(t), 200)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, place.OrderID().IsEqual(validOrderID)) // State unchanged
 
 		// Invalid clear operation
 		err = place.Clear(invalidOrderID)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, place.OrderID().IsEqual(validOrderID)) // State unchanged
 
 		// Wrong order clear operation
 		err = place.Clear(createValidOrderID(t))
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.True(t, place.OrderID().IsEqual(validOrderID)) // State unchanged
 	})
 }
@@ -610,8 +610,8 @@ func TestStoragePlace_ConcurrentUsage(t *testing.T) {
 				assert.NotNil(t, place.OrderID())
 				assert.NoError(t, place.Validate())
 
-				canStore, err := place.CanStore(200)
-				assert.NoError(t, err)
+				canStore, canStoreErr := place.CanStore(200)
+				assert.NoError(t, canStoreErr)
 				assert.False(t, canStore)
 			}()
 		}

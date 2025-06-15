@@ -10,7 +10,9 @@ import (
 
 // ErrUUIDIsNotConstructed indicates that a UUID was not properly initialized through one of the constructor functions.
 // This error is returned when validating a zero-value UUID.
-var ErrUUIDIsNotConstructed = errs.NewValueIsRequiredError("UUID must be created via NewUUID, UUIDFromString, or UUIDFromBytes")
+var ErrUUIDIsNotConstructed = errs.NewValueIsRequiredError(
+	"UUID must be created via NewUUID, UUIDFromString, or UUIDFromBytes",
+)
 
 // UUID is a value object that represents a universally unique identifier.
 // It wraps the github.com/google/uuid implementation to provide domain-specific behavior

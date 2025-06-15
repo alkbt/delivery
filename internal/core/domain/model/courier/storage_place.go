@@ -195,7 +195,10 @@ func (s *StoragePlace) OrderID() *kernel.UUID {
 //	}
 func (s *StoragePlace) CanStore(volume int) (bool, error) {
 	if volume <= 0 {
-		return false, errs.NewValueIsInvalidErrorWithCause("volume is invalid", fmt.Errorf("%d is not greater than 0", volume))
+		return false, errs.NewValueIsInvalidErrorWithCause(
+			"volume is invalid",
+			fmt.Errorf("%d is not greater than 0", volume),
+		)
 	}
 
 	return !s.isOccupied() && s.totalVolume >= volume, nil
@@ -306,7 +309,10 @@ func (s *StoragePlace) setName(name string) error {
 
 func (s *StoragePlace) setTotalVolume(totalVolume int) error {
 	if totalVolume <= 0 {
-		return errs.NewValueIsInvalidErrorWithCause("totalVolume is invalid", fmt.Errorf("%d is not greater than 0", totalVolume))
+		return errs.NewValueIsInvalidErrorWithCause(
+			"totalVolume is invalid",
+			fmt.Errorf("%d is not greater than 0", totalVolume),
+		)
 	}
 
 	s.totalVolume = totalVolume

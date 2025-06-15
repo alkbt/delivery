@@ -16,7 +16,7 @@ func TestNewLocation(t *testing.T) {
 		x       kernel.Coordinate
 		y       kernel.Coordinate
 		wantErr bool
-		errType error
+		errType *errs.ValueIsOutOfRangeError
 	}{
 		{
 			name:    "valid location",
@@ -41,28 +41,32 @@ func TestNewLocation(t *testing.T) {
 			x:       kernel.LocationMinX - 1,
 			y:       5,
 			wantErr: true,
-			errType: errs.NewValueIsOutOfRangeError("x", kernel.Coordinate(kernel.LocationMinX-1), kernel.LocationMinX, kernel.LocationMaxX),
+			errType: errs.NewValueIsOutOfRangeError("x", kernel.LocationMinX-1,
+				kernel.LocationMinX, kernel.LocationMaxX),
 		},
 		{
 			name:    "invalid x too large",
 			x:       kernel.LocationMaxX + 1,
 			y:       5,
 			wantErr: true,
-			errType: errs.NewValueIsOutOfRangeError("x", kernel.Coordinate(kernel.LocationMaxX+1), kernel.LocationMinX, kernel.LocationMaxX),
+			errType: errs.NewValueIsOutOfRangeError("x", kernel.LocationMaxX+1,
+				kernel.LocationMinX, kernel.LocationMaxX),
 		},
 		{
 			name:    "invalid y too small",
 			x:       5,
 			y:       kernel.LocationMinY - 1,
 			wantErr: true,
-			errType: errs.NewValueIsOutOfRangeError("y", kernel.Coordinate(kernel.LocationMinY-1), kernel.LocationMinY, kernel.LocationMaxY),
+			errType: errs.NewValueIsOutOfRangeError("y", kernel.LocationMinY-1,
+				kernel.LocationMinY, kernel.LocationMaxY),
 		},
 		{
 			name:    "invalid y too large",
 			x:       5,
 			y:       kernel.LocationMaxY + 1,
 			wantErr: true,
-			errType: errs.NewValueIsOutOfRangeError("y", kernel.Coordinate(kernel.LocationMaxY+1), kernel.LocationMinY, kernel.LocationMaxY),
+			errType: errs.NewValueIsOutOfRangeError("y", kernel.LocationMaxY+1,
+				kernel.LocationMinY, kernel.LocationMaxY),
 		},
 		{
 			name:    "both x and y invalid",
@@ -77,10 +81,11 @@ func TestNewLocation(t *testing.T) {
 			loc, err := kernel.NewLocation(tt.x, tt.y)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Zero(t, loc)
 				if tt.errType != nil {
-					assert.ErrorAs(t, err, &tt.errType)
+					var targetErr *errs.ValueIsOutOfRangeError
+					require.ErrorAs(t, err, &targetErr)
 				}
 			} else {
 				require.NoError(t, err)
@@ -116,7 +121,7 @@ func TestLocation_Validate(t *testing.T) {
 	t.Run("zero value location", func(t *testing.T) {
 		var loc kernel.Location
 		err := loc.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, kernel.ErrLocationIsNotConstructed, err)
 	})
 }
@@ -228,7 +233,7 @@ func TestLocation_IsEqual(t *testing.T) {
 			got, err := tt.loc1.IsEqual(tt.loc2)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.False(t, got)
 			} else {
 				require.NoError(t, err)
@@ -316,7 +321,7 @@ func TestLocation_Distance(t *testing.T) {
 			got, err := tt.loc1.Distance(tt.loc2)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, 0, got)
 			} else {
 				require.NoError(t, err)
@@ -327,38 +332,54 @@ func TestLocation_Distance(t *testing.T) {
 }
 
 func TestLocation_DistanceProperties(t *testing.T) {
-	t.Run("distance symmetry", func(t *testing.T) {
-		// Test that distance(A, B) == distance(B, A)
-		for x1 := kernel.LocationMinX; x1 <= kernel.LocationMaxX; x1++ {
-			for y1 := kernel.LocationMinY; y1 <= kernel.LocationMaxY; y1++ {
-				for x2 := kernel.LocationMinX; x2 <= kernel.LocationMaxX; x2++ {
-					for y2 := kernel.LocationMinY; y2 <= kernel.LocationMaxY; y2++ {
-						loc1 := mustNewLocation(t, x1, y1)
-						loc2 := mustNewLocation(t, x2, y2)
+	// reusable helpers -------------------------------------------------------
 
-						dist1, err1 := loc1.Distance(loc2)
-						require.NoError(t, err1)
+	// mustDistance returns the distance between two locations and fails the test if an error occurs.
+	mustDistance := func(t *testing.T, from, to kernel.Location) int {
+		t.Helper()
+		d, err := from.Distance(to)
+		require.NoError(t, err)
+		return d
+	}
 
-						dist2, err2 := loc2.Distance(loc1)
-						require.NoError(t, err2)
-
-						assert.Equal(t, dist1, dist2, "Distance should be symmetric for %v and %v", loc1, loc2)
-					}
-				}
+	// forEachLocation executes fn for every coordinate on the grid.
+	forEachLocation := func(t *testing.T, fn func(loc kernel.Location)) {
+		for x := kernel.LocationMinX; x <= kernel.LocationMaxX; x++ {
+			for y := kernel.LocationMinY; y <= kernel.LocationMaxY; y++ {
+				fn(mustNewLocation(t, x, y))
 			}
 		}
+	}
+
+	// forEachLocationPair executes fn for every ordered pair of coordinates on the grid.
+	forEachLocationPair := func(t *testing.T, fn func(a, b kernel.Location)) {
+		forEachLocation(t, func(a kernel.Location) {
+			forEachLocation(t, func(b kernel.Location) {
+				fn(a, b)
+			})
+		})
+	}
+
+	// assertDistanceSymmetry asserts that Distance is symmetric for a pair of locations.
+	assertDistanceSymmetry := func(t *testing.T, a, b kernel.Location) {
+		distAB := mustDistance(t, a, b)
+		distBA := mustDistance(t, b, a)
+		assert.Equal(t, distAB, distBA, "Distance should be symmetric for %v and %v", a, b)
+	}
+
+	// -----------------------------------------------------------------------
+
+	t.Run("distance symmetry", func(t *testing.T) {
+		forEachLocationPair(t, func(a, b kernel.Location) {
+			assertDistanceSymmetry(t, a, b)
+		})
 	})
 
 	t.Run("distance identity", func(t *testing.T) {
-		// Test that distance(A, A) == 0
-		for x := kernel.LocationMinX; x <= kernel.LocationMaxX; x++ {
-			for y := kernel.LocationMinY; y <= kernel.LocationMaxY; y++ {
-				loc := mustNewLocation(t, x, y)
-				dist, err := loc.Distance(loc)
-				require.NoError(t, err)
-				assert.Equal(t, 0, dist, "Distance from location to itself should be 0")
-			}
-		}
+		forEachLocation(t, func(loc kernel.Location) {
+			dist := mustDistance(t, loc, loc)
+			assert.Equal(t, 0, dist, "Distance from location to itself should be 0")
+		})
 	})
 
 	t.Run("triangle inequality", func(t *testing.T) {
@@ -378,14 +399,9 @@ func TestLocation_DistanceProperties(t *testing.T) {
 				locB := mustNewLocation(t, tc.b, tc.b)
 				locC := mustNewLocation(t, tc.c, tc.c)
 
-				distAC, err := locA.Distance(locC)
-				require.NoError(t, err)
-
-				distAB, err := locA.Distance(locB)
-				require.NoError(t, err)
-
-				distBC, err := locB.Distance(locC)
-				require.NoError(t, err)
+				distAC := mustDistance(t, locA, locC)
+				distAB := mustDistance(t, locA, locB)
+				distBC := mustDistance(t, locB, locC)
 
 				assert.LessOrEqual(t, distAC, distAB+distBC, "Triangle inequality should hold")
 			})
@@ -447,7 +463,7 @@ func FuzzNewLocation(f *testing.F) {
 			assert.NoError(t, loc.Validate())
 		} else {
 			// Should fail
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Zero(t, loc)
 		}
 	})

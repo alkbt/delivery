@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test helper functions
+// Test helper functions.
 func createValidCourier(t *testing.T) *courier.Courier {
 	t.Helper()
 	id := kernel.NewUUID()
 	location, err := kernel.NewLocation(1, 1)
 	require.NoError(t, err)
-	
+
 	c, err := courier.NewCourier(id, "Test Courier", 3, location)
 	require.NoError(t, err)
 	require.NotNil(t, c)
@@ -36,7 +36,7 @@ func createValidOrder(t *testing.T, volume int) *order.Order {
 	t.Helper()
 	id := kernel.NewUUID()
 	location := createValidLocation(t, 5, 5)
-	
+
 	o, err := order.NewOrder(id, location, volume)
 	require.NoError(t, err)
 	require.NotNil(t, o)
@@ -54,12 +54,12 @@ func TestNewCourier(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, c)
-		assert.NoError(t, c.Validate())
+		require.NoError(t, c.Validate())
 		assert.True(t, c.ID().IsEqual(validID))
 		assert.Equal(t, validName, c.Name())
 		assert.Equal(t, validSpeed, c.Speed())
 		assert.Equal(t, validLocation, c.Location())
-		
+
 		// Should have default storage bag
 		storagePlaces := c.StoragePlaces()
 		assert.Len(t, storagePlaces, 1)
@@ -72,7 +72,7 @@ func TestNewCourier(t *testing.T) {
 
 		c, err := courier.NewCourier(invalidID, validName, validSpeed, validLocation)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, c)
 		assert.Contains(t, err.Error(), kernel.ErrUUIDIsNotConstructed.Error())
 	})
@@ -80,7 +80,7 @@ func TestNewCourier(t *testing.T) {
 	t.Run("should return error for empty name", func(t *testing.T) {
 		c, err := courier.NewCourier(validID, "", validSpeed, validLocation)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, c)
 		assert.Contains(t, err.Error(), "name")
 	})
@@ -98,7 +98,7 @@ func TestNewCourier(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				c, err := courier.NewCourier(validID, validName, tc.speed, validLocation)
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, c)
 				assert.Contains(t, err.Error(), "speed")
 			})
@@ -110,7 +110,7 @@ func TestNewCourier(t *testing.T) {
 
 		c, err := courier.NewCourier(validID, validName, validSpeed, invalidLocation)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, c)
 		assert.Contains(t, err.Error(), "location must be created")
 	})
@@ -121,7 +121,7 @@ func TestNewCourier(t *testing.T) {
 
 		c, err := courier.NewCourier(invalidID, "", -1, invalidLocation)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, c)
 
 		// Verify that all validation errors are included
@@ -150,10 +150,10 @@ func TestNewCourier(t *testing.T) {
 				c, err := courier.NewCourier(validID, validName, tc.speed, validLocation)
 
 				if tc.shouldError {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Nil(t, c)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, c)
 					assert.Equal(t, tc.speed, c.Speed())
 				}
@@ -176,7 +176,7 @@ func TestNewCourier(t *testing.T) {
 				location := createValidLocation(t, tc.x, tc.y)
 				c, err := courier.NewCourier(validID, validName, validSpeed, location)
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, c)
 				assert.Equal(t, location, c.Location())
 			})
@@ -196,7 +196,7 @@ func TestNewCourier(t *testing.T) {
 			t.Run(fmt.Sprintf("name_%s", name), func(t *testing.T) {
 				c, err := courier.NewCourier(validID, name, validSpeed, validLocation)
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, c)
 				assert.Equal(t, name, c.Name())
 			})
@@ -244,7 +244,7 @@ func TestCourier_Validate(t *testing.T) {
 
 		err := c.Validate()
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("should return error for zero value courier", func(t *testing.T) {
@@ -252,7 +252,7 @@ func TestCourier_Validate(t *testing.T) {
 
 		err := c.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrCourierIsNotConstructed, err)
 	})
 
@@ -261,7 +261,7 @@ func TestCourier_Validate(t *testing.T) {
 
 		err := c.Validate()
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrCourierIsNotConstructed, err)
 	})
 }
@@ -293,7 +293,7 @@ func TestCourier_Getters(t *testing.T) {
 
 	t.Run("should return storage places", func(t *testing.T) {
 		storagePlaces := c.StoragePlaces()
-		
+
 		assert.NotNil(t, storagePlaces)
 		assert.Len(t, storagePlaces, 1) // Default bag
 		assert.Equal(t, "Сумка", storagePlaces[0].Name())
@@ -306,7 +306,7 @@ func TestCourier_Getters(t *testing.T) {
 
 		// Should return different slice instances (defensive copy)
 		assert.NotSame(t, &storagePlaces1, &storagePlaces2)
-		assert.Equal(t, len(storagePlaces1), len(storagePlaces2))
+		assert.Len(t, storagePlaces2, len(storagePlaces1))
 	})
 }
 
@@ -320,7 +320,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, startLocation, c.Location())
 	})
 
@@ -330,7 +330,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err := c.Move(invalidLocation)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "location must be created")
 	})
 
@@ -343,7 +343,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 3, 1) // Should reach target
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -357,7 +357,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 3, 1) // Should move 2 steps
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -371,7 +371,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 4, 1) // Should move X first
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -385,7 +385,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 5, 4) // Should reach target (3 steps Y)
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -399,7 +399,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 3, 3) // 2 steps X, 2 steps Y
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -413,7 +413,7 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 3, 5) // Should move 2 steps left
 		assert.Equal(t, expectedLocation, c.Location())
 	})
@@ -427,38 +427,38 @@ func TestCourier_Move(t *testing.T) {
 
 		err = c.Move(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		expectedLocation := createValidLocation(t, 5, 5) // Should move 3 steps down
 		assert.Equal(t, expectedLocation, c.Location())
 	})
 
 	t.Run("should handle diagonal movement efficiently", func(t *testing.T) {
 		testCases := []struct {
-			name           string
-			startX, startY kernel.Coordinate
-			targetX, targetY kernel.Coordinate
-			speed          int
+			name                 string
+			startX, startY       kernel.Coordinate
+			targetX, targetY     kernel.Coordinate
+			speed                int
 			expectedX, expectedY kernel.Coordinate
 		}{
 			{
-				name: "northeast movement",
+				name:   "northeast movement",
 				startX: 1, startY: 1,
 				targetX: 4, targetY: 4,
-				speed: 5,
+				speed:     5,
 				expectedX: 4, expectedY: 3, // 3 steps X, 2 steps Y
 			},
 			{
-				name: "southwest movement", 
+				name:   "southwest movement",
 				startX: 8, startY: 8,
 				targetX: 5, targetY: 5,
-				speed: 4,
+				speed:     4,
 				expectedX: 5, expectedY: 7, // 3 steps X, 1 step Y
 			},
 			{
-				name: "southeast movement",
+				name:   "southeast movement",
 				startX: 2, startY: 8,
 				targetX: 6, targetY: 4,
-				speed: 6,
+				speed:     6,
 				expectedX: 6, expectedY: 6, // 4 steps X, 2 steps Y
 			},
 		}
@@ -473,7 +473,7 @@ func TestCourier_Move(t *testing.T) {
 
 				err = c.Move(targetLocation)
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				expectedLocation := createValidLocation(t, tc.expectedX, tc.expectedY)
 				assert.Equal(t, expectedLocation, c.Location())
 			})
@@ -482,25 +482,25 @@ func TestCourier_Move(t *testing.T) {
 
 	t.Run("should handle boundary movements", func(t *testing.T) {
 		testCases := []struct {
-			name           string
-			startX, startY kernel.Coordinate
+			name             string
+			startX, startY   kernel.Coordinate
 			targetX, targetY kernel.Coordinate
-			speed          int
+			speed            int
 		}{
 			{
-				name: "from corner to corner",
+				name:   "from corner to corner",
 				startX: 1, startY: 1,
 				targetX: 10, targetY: 10,
 				speed: 10,
 			},
 			{
-				name: "along top edge",
+				name:   "along top edge",
 				startX: 1, startY: 10,
 				targetX: 10, targetY: 10,
 				speed: 5,
 			},
 			{
-				name: "along bottom edge",
+				name:   "along bottom edge",
 				startX: 10, startY: 1,
 				targetX: 1, targetY: 1,
 				speed: 8,
@@ -517,7 +517,7 @@ func TestCourier_Move(t *testing.T) {
 
 				err = c.Move(targetLocation)
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				// Should not go out of bounds (1-10 range)
 				newLocation := c.Location()
 				assert.GreaterOrEqual(t, int(newLocation.X()), 1)
@@ -537,27 +537,27 @@ func TestCourier_Move(t *testing.T) {
 
 		// First move: should move 2 steps toward target
 		err = c.Move(targetLocation)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, createValidLocation(t, 3, 1), c.Location())
 
 		// Second move: should move 2 more steps
 		err = c.Move(targetLocation)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, createValidLocation(t, 5, 1), c.Location())
 
 		// Third move: should move remaining 2 X steps
 		err = c.Move(targetLocation)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, createValidLocation(t, 7, 1), c.Location())
 
 		// Fourth move: should start Y movement
 		err = c.Move(targetLocation)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, createValidLocation(t, 7, 3), c.Location())
 
 		// Fifth move: should reach target
 		err = c.Move(targetLocation)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, targetLocation, c.Location())
 	})
 }
@@ -570,8 +570,8 @@ func TestCourier_CalculateTimeToLocation(t *testing.T) {
 
 		time, err := c.CalculateTimeToLocation(location)
 
-		assert.NoError(t, err)
-		assert.Equal(t, 0.0, time)
+		require.NoError(t, err)
+		assert.InDelta(t, 0.0, time, 0.0001)
 	})
 
 	t.Run("should return error for invalid target location", func(t *testing.T) {
@@ -580,45 +580,45 @@ func TestCourier_CalculateTimeToLocation(t *testing.T) {
 
 		time, err := c.CalculateTimeToLocation(invalidLocation)
 
-		assert.Error(t, err)
-		assert.Equal(t, 0.0, time)
+		require.Error(t, err)
+		assert.InDelta(t, 0.0, time, 0.0001)
 		assert.Contains(t, err.Error(), "location must be created")
 	})
 
 	t.Run("should calculate correct time for various distances and speeds", func(t *testing.T) {
 		testCases := []struct {
-			name           string
-			startX, startY kernel.Coordinate
+			name             string
+			startX, startY   kernel.Coordinate
 			targetX, targetY kernel.Coordinate
-			speed          int
-			expectedTime   float64
+			speed            int
+			expectedTime     float64
 		}{
 			{
-				name: "distance 4, speed 2",
+				name:   "distance 4, speed 2",
 				startX: 1, startY: 1,
 				targetX: 3, targetY: 3,
-				speed: 2,
+				speed:        2,
 				expectedTime: 2.0, // Manhattan distance: |1-3| + |1-3| = 4, time: 4/2 = 2
 			},
 			{
-				name: "distance 6, speed 3",
+				name:   "distance 6, speed 3",
 				startX: 2, startY: 3,
 				targetX: 5, targetY: 6,
-				speed: 3,
+				speed:        3,
 				expectedTime: 2.0, // Distance: |2-5| + |3-6| = 6, time: 6/3 = 2
 			},
 			{
-				name: "fractional time",
+				name:   "fractional time",
 				startX: 1, startY: 1,
 				targetX: 4, targetY: 1,
-				speed: 2,
+				speed:        2,
 				expectedTime: 1.5, // Distance: 3, time: 3/2 = 1.5
 			},
 			{
-				name: "high speed, short distance",
+				name:   "high speed, short distance",
 				startX: 5, startY: 5,
 				targetX: 6, targetY: 6,
-				speed: 10,
+				speed:        10,
 				expectedTime: 0.2, // Distance: 2, time: 2/10 = 0.2
 			},
 		}
@@ -633,8 +633,8 @@ func TestCourier_CalculateTimeToLocation(t *testing.T) {
 
 				time, err := c.CalculateTimeToLocation(targetLocation)
 
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedTime, time)
+				require.NoError(t, err)
+				assert.InEpsilon(t, tc.expectedTime, time, 0.0001)
 			})
 		}
 	})
@@ -647,40 +647,40 @@ func TestCourier_CalculateTimeToLocation(t *testing.T) {
 
 		time, err := c.CalculateTimeToLocation(targetLocation)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// Distance: |1-10| + |1-10| = 18, time: 18/3 = 6
-		assert.Equal(t, 6.0, time)
+		assert.InEpsilon(t, 6.0, time, 0.0001)
 	})
 }
 
 func TestCourier_CanTakeOrder(t *testing.T) {
 	t.Run("should return true for valid order that fits in storage", func(t *testing.T) {
-		c := createValidCourier(t) // Has default storage with 10 volume
+		c := createValidCourier(t)      // Has default storage with 10 volume
 		order := createValidOrder(t, 5) // Order with volume 5
 
 		canTake, err := c.CanTakeOrder(order)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, canTake)
 	})
 
 	t.Run("should return true for order with exact storage capacity", func(t *testing.T) {
-		c := createValidCourier(t) // Has default storage with 10 volume
+		c := createValidCourier(t)       // Has default storage with 10 volume
 		order := createValidOrder(t, 10) // Order with exact capacity
 
 		canTake, err := c.CanTakeOrder(order)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, canTake)
 	})
 
 	t.Run("should return false for order exceeding storage capacity", func(t *testing.T) {
-		c := createValidCourier(t) // Has default storage with 10 volume
+		c := createValidCourier(t)       // Has default storage with 10 volume
 		order := createValidOrder(t, 15) // Order exceeds capacity
 
 		canTake, err := c.CanTakeOrder(order)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, canTake)
 	})
 
@@ -690,7 +690,7 @@ func TestCourier_CanTakeOrder(t *testing.T) {
 
 		canTake, err := c.CanTakeOrder(invalidOrder)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.False(t, canTake)
 	})
 
@@ -706,13 +706,13 @@ func TestCourier_CanTakeOrder(t *testing.T) {
 		// Try to check if second order can be taken
 		canTake, err := c.CanTakeOrder(secondOrder)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.False(t, canTake) // Should be false because storage is occupied
 	})
 
 	t.Run("should find available storage when courier has multiple storage places", func(t *testing.T) {
 		c := createValidCourier(t)
-		
+
 		// Add additional storage
 		err := c.AddStoragePlace("Backpack", 15)
 		require.NoError(t, err)
@@ -726,7 +726,7 @@ func TestCourier_CanTakeOrder(t *testing.T) {
 		secondOrder := createValidOrder(t, 12)
 		canTake, err := c.CanTakeOrder(secondOrder)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, canTake)
 	})
 }
@@ -738,8 +738,8 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 		err := c.TakeOrder(order)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Verify order is stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -753,8 +753,8 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 		err := c.TakeOrder(order)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Verify order is stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -768,8 +768,8 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 		err := c.TakeOrder(invalidOrder)
 
-		assert.Error(t, err)
-		
+		require.Error(t, err)
+
 		// Verify no order is stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -782,9 +782,9 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 		err := c.TakeOrder(order)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceNotFound, err)
-		
+
 		// Verify no order is stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -803,9 +803,9 @@ func TestCourier_TakeOrder(t *testing.T) {
 		// Try to take second order
 		err = c.TakeOrder(secondOrder)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceNotFound, err)
-		
+
 		// Verify first order is still stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -815,7 +815,7 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 	t.Run("should use first available storage place", func(t *testing.T) {
 		c := createValidCourier(t)
-		
+
 		// Add additional storage places
 		err := c.AddStoragePlace("Backpack", 15)
 		require.NoError(t, err)
@@ -826,8 +826,8 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 		err = c.TakeOrder(order)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Should use first storage place (default bag with 10 capacity)
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 3)
@@ -839,7 +839,7 @@ func TestCourier_TakeOrder(t *testing.T) {
 
 	t.Run("should use appropriate storage place when first is too small", func(t *testing.T) {
 		c := createValidCourier(t)
-		
+
 		// Occupy default storage with large order
 		largeOrder := createValidOrder(t, 10)
 		err := c.TakeOrder(largeOrder)
@@ -853,8 +853,8 @@ func TestCourier_TakeOrder(t *testing.T) {
 		secondOrder := createValidOrder(t, 15)
 		err = c.TakeOrder(secondOrder)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Should use the large backpack
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 2)
@@ -877,8 +877,8 @@ func TestCourier_CompleteOrder(t *testing.T) {
 		// Complete the order
 		err = c.CompleteOrder(order.ID())
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Verify order is no longer stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -897,9 +897,9 @@ func TestCourier_CompleteOrder(t *testing.T) {
 		var invalidID kernel.UUID
 		err = c.CompleteOrder(invalidID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), kernel.ErrUUIDIsNotConstructed.Error())
-		
+
 		// Verify order is still stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -919,9 +919,9 @@ func TestCourier_CompleteOrder(t *testing.T) {
 		differentOrderID := kernel.NewUUID()
 		err = c.CompleteOrder(differentOrderID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceNotFound, err)
-		
+
 		// Verify original order is still stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -935,13 +935,13 @@ func TestCourier_CompleteOrder(t *testing.T) {
 
 		err := c.CompleteOrder(orderID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, courier.ErrStoragePlaceNotFound, err)
 	})
 
 	t.Run("should complete correct order when multiple orders are stored", func(t *testing.T) {
 		c := createValidCourier(t)
-		
+
 		// Add additional storage
 		err := c.AddStoragePlace("Backpack", 15)
 		require.NoError(t, err)
@@ -958,8 +958,8 @@ func TestCourier_CompleteOrder(t *testing.T) {
 		// Complete first order
 		err = c.CompleteOrder(firstOrder.ID())
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Verify first storage is empty, second still has order
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 2)
@@ -982,8 +982,8 @@ func TestCourier_CompleteOrder(t *testing.T) {
 		// Take second order
 		err = c.TakeOrder(secondOrder)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		// Verify second order is stored
 		storagePlaces := c.StoragePlaces()
 		require.Len(t, storagePlaces, 1)
@@ -999,11 +999,11 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 
 		err := c.AddStoragePlace("Backpack", 20)
 
-		assert.NoError(t, err)
-		
+		require.NoError(t, err)
+
 		storagePlaces := c.StoragePlaces()
 		assert.Len(t, storagePlaces, initialCount+1)
-		
+
 		// Check the new storage place
 		newStorage := storagePlaces[len(storagePlaces)-1]
 		assert.Equal(t, "Backpack", newStorage.Name())
@@ -1017,9 +1017,9 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 
 		err := c.AddStoragePlace("", 15)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "name")
-		
+
 		// Verify no storage place was added
 		storagePlaces := c.StoragePlaces()
 		assert.Len(t, storagePlaces, initialCount)
@@ -1041,9 +1041,9 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				err := c.AddStoragePlace("Test Storage", tc.volume)
 
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), "totalVolume is invalid")
-				
+
 				// Verify no storage place was added
 				storagePlaces := c.StoragePlaces()
 				assert.Len(t, storagePlaces, initialCount)
@@ -1065,11 +1065,11 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 
 		for i, config := range storageConfigs {
 			err := c.AddStoragePlace(config.name, config.volume)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			storagePlaces := c.StoragePlaces()
 			assert.Len(t, storagePlaces, 1+i+1) // +1 for default bag, +i+1 for added ones
-			
+
 			newStorage := storagePlaces[len(storagePlaces)-1]
 			assert.Equal(t, config.name, newStorage.Name())
 			assert.Equal(t, config.volume, newStorage.TotalVolume())
@@ -1098,14 +1098,14 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 				err := c.AddStoragePlace("Test Storage", tc.volume)
 
 				if tc.shouldError {
-					assert.Error(t, err)
+					require.Error(t, err)
 					storagePlaces := c.StoragePlaces()
 					assert.Len(t, storagePlaces, initialCount)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					storagePlaces := c.StoragePlaces()
 					assert.Len(t, storagePlaces, initialCount+1)
-					
+
 					newStorage := storagePlaces[len(storagePlaces)-1]
 					assert.Equal(t, tc.volume, newStorage.TotalVolume())
 				}
@@ -1125,10 +1125,12 @@ func TestCourier_AddStoragePlace(t *testing.T) {
 		require.Len(t, storagePlaces, 3) // Default + 2 added
 
 		// All IDs should be unique
-		for i := 0; i < len(storagePlaces); i++ {
-			for j := i + 1; j < len(storagePlaces); j++ {
-				assert.False(t, storagePlaces[i].ID().IsEqual(storagePlaces[j].ID()),
-					"Storage places should have unique IDs")
+		for i := range storagePlaces {
+			for j := range storagePlaces {
+				if j > i {
+					assert.False(t, storagePlaces[i].ID().IsEqual(storagePlaces[j].ID()),
+						"Storage places should have unique IDs")
+				}
 			}
 		}
 	})
@@ -1180,19 +1182,19 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 		require.NoError(t, err)
 		expectedDistance := 7 + 5 // |1-8| + |1-6| = 12
 		expectedTime := float64(expectedDistance) / 3.0
-		assert.Equal(t, expectedTime, deliveryTime)
+		assert.InEpsilon(t, expectedTime, deliveryTime, 0.0001)
 
 		// 4. Move toward delivery location (multiple moves required)
 		for c.Location() != deliveryLocation {
 			oldLocation := c.Location()
 			err = c.Move(deliveryLocation)
 			require.NoError(t, err)
-			
+
 			// Should make progress toward target
-			newDistance, err := c.Location().Distance(deliveryLocation)
-			require.NoError(t, err)
-			oldDistance, err := oldLocation.Distance(deliveryLocation)
-			require.NoError(t, err)
+			newDistance, newErr := c.Location().Distance(deliveryLocation)
+			require.NoError(t, newErr)
+			oldDistance, oldErr := oldLocation.Distance(deliveryLocation)
+			require.NoError(t, oldErr)
 			assert.LessOrEqual(t, newDistance, oldDistance)
 		}
 
@@ -1216,9 +1218,9 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create orders that will fit in different storage places
-		smallOrder := createValidOrder(t, 4)   // Will fit in Small Bag (5 capacity)
-		mediumOrder := createValidOrder(t, 8)  // Will fit in Default Bag (10 capacity)
-		largeOrder := createValidOrder(t, 15)  // Will fit in Large Backpack (20 capacity)
+		smallOrder := createValidOrder(t, 4)  // Will fit in Small Bag (5 capacity)
+		mediumOrder := createValidOrder(t, 8) // Will fit in Default Bag (10 capacity)
+		largeOrder := createValidOrder(t, 15) // Will fit in Large Backpack (20 capacity)
 
 		// Take orders - first-fit algorithm should place them in first available storage
 		err = c.TakeOrder(smallOrder) // Should go to Default Bag (10 capacity) - first available
@@ -1226,7 +1228,7 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 		err = c.TakeOrder(mediumOrder) // Should go to Small Bag (5 capacity), but won't fit, so Large Backpack
 		require.NoError(t, err)
 		err = c.TakeOrder(largeOrder) // Default and Large are occupied, Small Bag can't fit it
-		assert.Error(t, err) // This should fail
+		require.Error(t, err)         // This should fail
 
 		// Verify only two orders are stored
 		storagePlaces := c.StoragePlaces()
@@ -1240,8 +1242,9 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 		require.NoError(t, err)
 
 		// Now we can take the large order
-		err = c.TakeOrder(largeOrder) // Should go to Default Bag (10 capacity) but won't fit, then Large Backpack but occupied, then fail
-		assert.Error(t, err) // Still can't fit because Large Backpack is occupied
+		// Should go to Default Bag (10 capacity) but won't fit, then Large Backpack but occupied, then fail
+		err = c.TakeOrder(largeOrder)
+		require.Error(t, err) // Still can't fit because Large Backpack is occupied
 
 		// Complete the medium order to free large storage
 		err = c.CompleteOrder(mediumOrder.ID())
@@ -1267,7 +1270,7 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 		// Multiple delivery locations
 		deliveryPoints := []kernel.Location{
 			createValidLocation(t, 5, 2), // 3 steps east
-			createValidLocation(t, 5, 6), // 4 steps north  
+			createValidLocation(t, 5, 6), // 4 steps north
 			createValidLocation(t, 1, 6), // 4 steps west
 			createValidLocation(t, 1, 1), // 5 steps south
 		}
@@ -1288,8 +1291,7 @@ func TestCourier_IntegrationScenarios(t *testing.T) {
 			}
 
 			// Should reach destination
-			assert.Equal(t, deliveryPoint, c.Location(), 
-				fmt.Sprintf("Should reach delivery point %d", i+1))
+			assert.Equal(t, deliveryPoint, c.Location(), "Should reach delivery point %d", i+1)
 
 			// Complete delivery
 			err = c.CompleteOrder(order.ID())
@@ -1318,7 +1320,7 @@ func TestCourier_EdgeCases(t *testing.T) {
 		assert.False(t, canTake)
 
 		err = c.TakeOrder(anotherOrder)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("should handle courier with high speed", func(t *testing.T) {
@@ -1355,10 +1357,10 @@ func TestCourier_EdgeCases(t *testing.T) {
 
 	t.Run("should handle grid boundary movements", func(t *testing.T) {
 		testCases := []struct {
-			name           string
-			startX, startY kernel.Coordinate
+			name             string
+			startX, startY   kernel.Coordinate
 			targetX, targetY kernel.Coordinate
-			speed          int
+			speed            int
 		}{
 			{"top-left to bottom-right", 1, 1, 10, 10, 20},
 			{"bottom-right to top-left", 10, 10, 1, 1, 20},
@@ -1440,15 +1442,15 @@ func TestCourier_EdgeCases(t *testing.T) {
 		c := createValidCourier(t)
 
 		// Rapidly take and complete many orders
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			order := createValidOrder(t, 5)
-			
+
 			err := c.TakeOrder(order)
 			require.NoError(t, err)
-			
+
 			err = c.CompleteOrder(order.ID())
 			require.NoError(t, err)
-			
+
 			// Storage should be empty after each cycle
 			storagePlaces := c.StoragePlaces()
 			assert.Nil(t, storagePlaces[0].OrderID())
@@ -1472,15 +1474,15 @@ func TestCourier_ErrorResilience(t *testing.T) {
 
 		// Invalid move operation
 		err = c.Move(invalidLocation)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, originalLocation, c.Location()) // Location unchanged
 
 		// Invalid order operations
 		err = c.TakeOrder(createValidOrder(t, 5)) // Should fail - storage occupied
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		err = c.CompleteOrder(invalidOrderID) // Should fail - invalid ID
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		// Original order should still be stored
 		storagePlaces := c.StoragePlaces()
@@ -1493,7 +1495,7 @@ func TestCourier_ErrorResilience(t *testing.T) {
 
 		// Try to add invalid storage place
 		err := c.AddStoragePlace("", -5) // Invalid name and volume
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		// Should still have only default storage
 		storagePlaces := c.StoragePlaces()
@@ -1503,12 +1505,12 @@ func TestCourier_ErrorResilience(t *testing.T) {
 		// Try to take invalid order
 		var invalidOrder *order.Order
 		err = c.TakeOrder(invalidOrder)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		// Storage should remain empty
 		assert.Nil(t, storagePlaces[0].OrderID())
 
 		// Courier should still be valid
-		assert.NoError(t, c.Validate())
+		require.NoError(t, c.Validate())
 	})
 }
