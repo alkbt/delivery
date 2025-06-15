@@ -1,10 +1,11 @@
 package courier
 
 import (
+	"errors"
+
 	"delivery/internal/core/domain/model/kernel"
 	"delivery/internal/core/domain/model/order"
 	"delivery/internal/pkg/errs"
-	"errors"
 )
 
 const (
