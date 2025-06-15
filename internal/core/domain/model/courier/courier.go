@@ -1,5 +1,3 @@
-// Package courier provides domain entities and business logic for courier management in the delivery system.
-// It implements the Courier aggregate root with movement capabilities, order management, and storage place handling.
 package courier
 
 import (

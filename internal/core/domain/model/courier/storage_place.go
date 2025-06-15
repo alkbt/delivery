@@ -1,9 +1,3 @@
-// Package courier provides domain models and value objects for courier-related functionality
-// in the delivery domain. This package encapsulates the business logic and rules
-// for managing storage places, courier operations, and related domain concepts.
-//
-// The package follows Domain-Driven Design (DDD) principles, providing immutable
-// value objects and entities with rich domain behavior and validation.
 package courier
 
 import (
