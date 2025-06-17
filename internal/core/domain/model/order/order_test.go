@@ -255,6 +255,110 @@ func TestOrder_Assign(t *testing.T) {
 	})
 }
 
+func TestOrder_ValidateAssign(t *testing.T) {
+	validID := kernel.NewUUID()
+	validLocation, _ := kernel.NewLocation(5, 7)
+	validVolume := 100
+	courierID := kernel.NewUUID()
+
+	t.Run("should allow assignment validation for Created order", func(t *testing.T) {
+		o, _ := order.NewOrder(validID, validLocation, validVolume)
+
+		err := o.ValidateAssign()
+
+		require.NoError(t, err)
+	})
+
+	t.Run("should allow assignment validation for Assigned order", func(t *testing.T) {
+		o, _ := order.NewOrder(validID, validLocation, validVolume)
+		_ = o.Assign(courierID)
+
+		err := o.ValidateAssign()
+
+		require.NoError(t, err)
+	})
+
+	t.Run("should reject assignment validation for Completed order", func(t *testing.T) {
+		o, _ := order.NewOrder(validID, validLocation, validVolume)
+		_ = o.Assign(courierID)
+		_ = o.Complete()
+
+		err := o.ValidateAssign()
+
+		require.Error(t, err)
+		assert.IsType(t, &errs.ValueIsInvalidError{}, err)
+		assert.Contains(t, err.Error(), "status is invalid")
+		assert.Contains(t, err.Error(), "Completed is not a valid status to assign")
+	})
+
+	t.Run("should have consistent behavior with Assign method", func(t *testing.T) {
+		testCases := []struct {
+			name           string
+			setupOrder     func() *order.Order
+			expectedResult bool
+		}{
+			{
+				name: "Created order",
+				setupOrder: func() *order.Order {
+					o, _ := order.NewOrder(validID, validLocation, validVolume)
+					return o
+				},
+				expectedResult: true,
+			},
+			{
+				name: "Assigned order",
+				setupOrder: func() *order.Order {
+					o, _ := order.NewOrder(validID, validLocation, validVolume)
+					_ = o.Assign(courierID)
+					return o
+				},
+				expectedResult: true,
+			},
+			{
+				name: "Completed order",
+				setupOrder: func() *order.Order {
+					o, _ := order.NewOrder(validID, validLocation, validVolume)
+					_ = o.Assign(courierID)
+					_ = o.Complete()
+					return o
+				},
+				expectedResult: false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				o := tc.setupOrder()
+				validateErr := o.ValidateAssign()
+
+				newCourierID := kernel.NewUUID()
+				assignErr := o.Assign(newCourierID)
+
+				// Both methods should agree on assignability
+				if tc.expectedResult {
+					assert.NoError(t, validateErr, "ValidateAssign should succeed")
+					assert.NoError(t, assignErr, "Assign should succeed")
+				} else {
+					require.Error(t, validateErr, "ValidateAssign should fail")
+					require.Error(t, assignErr, "Assign should fail")
+				}
+			})
+		}
+	})
+
+	t.Run("should not modify order state during validation", func(t *testing.T) {
+		o, _ := order.NewOrder(validID, validLocation, validVolume)
+		originalStatus := o.Status()
+		originalCourier := o.Courier()
+
+		_ = o.ValidateAssign()
+
+		// Order state should remain unchanged
+		assert.Equal(t, originalStatus, o.Status())
+		assert.Equal(t, originalCourier, o.Courier())
+	})
+}
+
 func TestOrder_Complete(t *testing.T) {
 	validID := kernel.NewUUID()
 	validLocation, _ := kernel.NewLocation(5, 7)

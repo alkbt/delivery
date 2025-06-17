@@ -142,6 +142,34 @@ func (o *Order) Courier() *kernel.UUID {
 	return o.courierID
 }
 
+// ValidateAssign checks if the order can be assigned to a courier.
+//
+// Valid states for assignment:
+//   - Created status (initial assignment)
+//   - Assigned status (reassignment allowed)
+//
+// Invalid states for assignment:
+//   - Completed status (final state, no further assignments)
+//   - Unknown status (invalid state)
+//
+// Returns:
+//   - nil if assignment is allowed
+//   - error with details if assignment is not allowed
+//
+// This method provides assignment validation without side effects,
+// useful for pre-validation before courier search and dispatch logic.
+//
+// Example:
+//
+//	if err := order.ValidateAssign(); err != nil {
+//	    // Handle non-assignable order (e.g., already completed)
+//	    return err
+//	}
+//	// Proceed with courier search and assignment
+func (o *Order) ValidateAssign() error {
+	return o.status.ValidateAssign()
+}
+
 // Assign assigns the order to a courier and updates the status to Assigned.
 //
 // This method enforces the following business rules:

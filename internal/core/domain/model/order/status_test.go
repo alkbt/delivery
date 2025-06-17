@@ -408,6 +408,86 @@ func TestStatus_Documentation(t *testing.T) {
 	})
 }
 
+func TestStatus_ValidateAssign(t *testing.T) {
+	t.Run("should allow assignment from valid statuses", func(t *testing.T) {
+		validStatuses := []order.Status{
+			order.Created,
+			order.Assigned,
+		}
+
+		for _, status := range validStatuses {
+			t.Run(fmt.Sprintf("should allow assignment from %s status", status.String()), func(t *testing.T) {
+				err := status.ValidateAssign()
+				require.NoError(t, err)
+			})
+		}
+	})
+
+	t.Run("should reject assignment from invalid statuses", func(t *testing.T) {
+		invalidStatuses := []order.Status{
+			order.Completed,
+			order.Unknown,
+		}
+
+		for _, status := range invalidStatuses {
+			t.Run(fmt.Sprintf("should reject assignment from %s status", status.String()), func(t *testing.T) {
+				err := status.ValidateAssign()
+
+				require.Error(t, err)
+				assert.IsType(t, &errs.ValueIsInvalidError{}, err)
+				assert.Contains(t, err.Error(), "status is invalid")
+				assert.Contains(t, err.Error(), fmt.Sprintf("%s is not a valid status to assign", status.String()))
+			})
+		}
+	})
+
+	t.Run("should reject assignment from arbitrary invalid status values", func(t *testing.T) {
+		invalidStatuses := []order.Status{
+			order.Status(-1),
+			order.Status(4),
+			order.Status(100),
+			order.Status(-999),
+		}
+
+		for _, status := range invalidStatuses {
+			t.Run(fmt.Sprintf("should reject assignment from status value %d", int(status)), func(t *testing.T) {
+				err := status.ValidateAssign()
+
+				require.Error(t, err)
+				assert.IsType(t, &errs.ValueIsInvalidError{}, err)
+				assert.Contains(t, err.Error(), "status is invalid")
+				assert.Contains(t, err.Error(), "is not a valid status to assign")
+			})
+		}
+	})
+
+	t.Run("should have consistent behavior with Assign method", func(t *testing.T) {
+		allStatuses := []order.Status{
+			order.Unknown,
+			order.Created,
+			order.Assigned,
+			order.Completed,
+			order.Status(-1),
+			order.Status(4),
+		}
+
+		for _, status := range allStatuses {
+			t.Run(fmt.Sprintf("consistency check for status %s (%d)", status.String(), int(status)),
+				func(t *testing.T) {
+					validateErr := status.ValidateAssign()
+					_, assignErr := status.Assign()
+
+					// Both methods should agree on assignability
+					if validateErr == nil {
+						assert.NoError(t, assignErr, "ValidateAssign passed but Assign failed")
+					} else {
+						assert.Error(t, assignErr, "ValidateAssign failed but Assign succeeded")
+					}
+				})
+		}
+	})
+}
+
 func TestStatus_Consistency(t *testing.T) {
 	t.Run("should have consistent String() and Validate() behavior", func(t *testing.T) {
 		allPossibleStatuses := []order.Status{
