@@ -98,6 +98,40 @@ func (s Status) String() string {
 	return "Unknown"
 }
 
+// ValidateAssign checks if the status allows assignment without performing the transition.
+//
+// Valid statuses for assignment:
+//   - Created (can be initially assigned)
+//   - Assigned (can be reassigned)
+//
+// Invalid statuses for assignment:
+//   - Completed (cannot assign completed orders)
+//   - Unknown (invalid status)
+//
+// Returns:
+//   - nil if assignment is allowed from current status
+//   - error with details if assignment is not allowed
+//
+// This method provides assignability validation without side effects,
+// useful for pre-validation and business logic checks.
+//
+// Example:
+//
+//	if err := status.ValidateAssign(); err != nil {
+//	    // Handle non-assignable status
+//	    return err
+//	}
+//	// Proceed with assignment
+func (s Status) ValidateAssign() error {
+	if s != Created && s != Assigned {
+		return errs.NewValueIsInvalidErrorWithCause(
+			"status is invalid",
+			fmt.Errorf("%s is not a valid status to assign", s.String()),
+		)
+	}
+	return nil
+}
+
 // Assign transitions the status to Assigned.
 //
 // Valid transitions:
@@ -121,11 +155,8 @@ func (s Status) String() string {
 //	    // Handle invalid transition
 //	}
 func (s Status) Assign() (Status, error) {
-	if s != Created && s != Assigned {
-		return 0, errs.NewValueIsInvalidErrorWithCause(
-			"status is invalid",
-			fmt.Errorf("%s is not a valid status to assign", s.String()),
-		)
+	if err := s.ValidateAssign(); err != nil {
+		return 0, err
 	}
 
 	return Assigned, nil
