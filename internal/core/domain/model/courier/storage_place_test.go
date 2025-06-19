@@ -622,3 +622,165 @@ func TestStoragePlace_ConcurrentUsage(t *testing.T) {
 		}
 	})
 }
+
+func TestRestoreStoragePlace(t *testing.T) {
+	validID := kernel.NewUUID()
+	validName := "Restored Storage Place"
+	validVolume := 1500
+	validOrderID := kernel.NewUUID()
+
+	t.Run("should restore storage place with nil order ID", func(t *testing.T) {
+		place, err := courier.RestoreStoragePlace(validID, validName, validVolume, nil)
+
+		require.NoError(t, err)
+		assert.NotNil(t, place)
+		assert.True(t, place.ID().IsEqual(validID))
+		assert.Equal(t, validName, place.Name())
+		assert.Equal(t, validVolume, place.TotalVolume())
+		assert.Nil(t, place.OrderID())
+		require.NoError(t, place.Validate())
+	})
+
+	t.Run("should restore storage place with valid order ID", func(t *testing.T) {
+		place, err := courier.RestoreStoragePlace(validID, validName, validVolume, &validOrderID)
+
+		require.NoError(t, err)
+		assert.NotNil(t, place)
+		assert.True(t, place.ID().IsEqual(validID))
+		assert.Equal(t, validName, place.Name())
+		assert.Equal(t, validVolume, place.TotalVolume())
+		assert.NotNil(t, place.OrderID())
+		assert.True(t, place.OrderID().IsEqual(validOrderID))
+		require.NoError(t, place.Validate())
+	})
+
+	t.Run("should return error for invalid ID", func(t *testing.T) {
+		var invalidID kernel.UUID
+
+		place, err := courier.RestoreStoragePlace(invalidID, validName, validVolume, nil)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		assert.Contains(t, err.Error(), "UUID")
+	})
+
+	t.Run("should return error for empty name", func(t *testing.T) {
+		place, err := courier.RestoreStoragePlace(validID, "", validVolume, nil)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		assert.Contains(t, err.Error(), "name is required")
+	})
+
+	t.Run("should return error for zero volume", func(t *testing.T) {
+		place, err := courier.RestoreStoragePlace(validID, validName, 0, nil)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		assert.Contains(t, err.Error(), "totalVolume is invalid")
+	})
+
+	t.Run("should return error for negative volume", func(t *testing.T) {
+		place, err := courier.RestoreStoragePlace(validID, validName, -100, nil)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		assert.Contains(t, err.Error(), "totalVolume is invalid")
+	})
+
+	t.Run("should return error for invalid order ID", func(t *testing.T) {
+		var invalidOrderID kernel.UUID
+
+		place, err := courier.RestoreStoragePlace(validID, validName, validVolume, &invalidOrderID)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		assert.Contains(t, err.Error(), "UUID")
+	})
+
+	t.Run("should aggregate multiple validation errors", func(t *testing.T) {
+		var invalidID kernel.UUID
+		var invalidOrderID kernel.UUID
+
+		place, err := courier.RestoreStoragePlace(invalidID, "", -100, &invalidOrderID)
+
+		require.Error(t, err)
+		assert.Nil(t, place)
+		// Should contain multiple error messages
+		errStr := err.Error()
+		assert.Contains(t, errStr, "UUID")
+		assert.Contains(t, errStr, "name")
+		assert.Contains(t, errStr, "totalVolume")
+	})
+
+	t.Run("restored storage place should be fully functional", func(t *testing.T) {
+		// Restore with no order
+		place, err := courier.RestoreStoragePlace(validID, validName, validVolume, nil)
+		require.NoError(t, err)
+
+		// Should be able to store an order
+		newOrderID := createValidOrderID(t)
+		canStore, err := place.CanStore(800)
+		require.NoError(t, err)
+		assert.True(t, canStore)
+
+		err = place.Store(newOrderID, 800)
+		require.NoError(t, err)
+		assert.True(t, place.OrderID().IsEqual(newOrderID))
+
+		// Should be able to clear the order
+		err = place.Clear(newOrderID)
+		require.NoError(t, err)
+		assert.Nil(t, place.OrderID())
+	})
+
+	t.Run("restored storage place with order should respect occupancy", func(t *testing.T) {
+		// Restore with an existing order
+		place, err := courier.RestoreStoragePlace(validID, validName, validVolume, &validOrderID)
+		require.NoError(t, err)
+
+		// Should not be able to store another order
+		newOrderID := createValidOrderID(t)
+		canStore, err := place.CanStore(100)
+		require.NoError(t, err)
+		assert.False(t, canStore)
+
+		err = place.Store(newOrderID, 100)
+		require.Error(t, err)
+		assert.Equal(t, courier.ErrCannotStoreOrderInThisStoragePlace, err)
+
+		// Should be able to clear the existing order
+		err = place.Clear(validOrderID)
+		require.NoError(t, err)
+		assert.Nil(t, place.OrderID())
+
+		// Now should be able to store new order
+		err = place.Store(newOrderID, 100)
+		require.NoError(t, err)
+		assert.True(t, place.OrderID().IsEqual(newOrderID))
+	})
+
+	t.Run("comparison with NewStoragePlace for empty state", func(t *testing.T) {
+		// Create using constructor
+		newPlace, err := courier.NewStoragePlace(validID, validName, validVolume)
+		require.NoError(t, err)
+
+		// Create using restore with no order
+		restoredPlace, err := courier.RestoreStoragePlace(validID, validName, validVolume, nil)
+		require.NoError(t, err)
+
+		// Both should have same basic properties
+		assert.True(t, newPlace.ID().IsEqual(restoredPlace.ID()))
+		assert.Equal(t, newPlace.Name(), restoredPlace.Name())
+		assert.Equal(t, newPlace.TotalVolume(), restoredPlace.TotalVolume())
+		assert.Equal(t, newPlace.OrderID(), restoredPlace.OrderID()) // Both nil
+		assert.True(t, newPlace.IsEqual(restoredPlace))
+
+		// Both should behave identically
+		canStoreNew, err := newPlace.CanStore(500)
+		require.NoError(t, err)
+		canStoreRestored, err := restoredPlace.CanStore(500)
+		require.NoError(t, err)
+		assert.Equal(t, canStoreNew, canStoreRestored)
+	})
+}

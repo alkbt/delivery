@@ -1648,3 +1648,415 @@ func TestCourier_CanTakeOrder_EdgeCases(t *testing.T) {
 		assert.True(t, canTake)
 	})
 }
+
+func TestRestoreCourier(t *testing.T) {
+	validID := kernel.NewUUID()
+	validName := "Restored Courier"
+	validSpeed := 3
+	validLocation := createValidLocation(t, 8, 9)
+
+	// Helper to create valid storage places for testing
+	createValidStoragePlaces := func(t *testing.T) []*courier.StoragePlace {
+		t.Helper()
+		place1, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Main Bag",
+			1000,
+			nil,
+		)
+		require.NoError(t, err)
+
+		place2, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Side Pouch",
+			500,
+			nil,
+		)
+		require.NoError(t, err)
+
+		return []*courier.StoragePlace{place1, place2}
+	}
+
+	t.Run("should restore courier with empty storage places", func(t *testing.T) {
+		storagePlaces := createValidStoragePlaces(t)
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+
+		require.NoError(t, err)
+		assert.NotNil(t, c)
+		assert.True(t, c.ID().IsEqual(validID))
+		assert.Equal(t, validName, c.Name())
+		assert.Equal(t, validSpeed, c.Speed())
+		locationEqual, err := c.Location().IsEqual(validLocation)
+		require.NoError(t, err)
+		assert.True(t, locationEqual)
+
+		restoredPlaces := c.StoragePlaces()
+		require.Len(t, restoredPlaces, 2)
+		assert.Equal(t, "Main Bag", restoredPlaces[0].Name())
+		assert.Equal(t, "Side Pouch", restoredPlaces[1].Name())
+		assert.Nil(t, restoredPlaces[0].OrderID())
+		assert.Nil(t, restoredPlaces[1].OrderID())
+
+		require.NoError(t, c.Validate())
+	})
+
+	t.Run("should restore courier with occupied storage places", func(t *testing.T) {
+		orderID1 := kernel.NewUUID()
+		orderID2 := kernel.NewUUID()
+
+		place1, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Occupied Bag",
+			800,
+			&orderID1,
+		)
+		require.NoError(t, err)
+
+		place2, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Empty Bag",
+			600,
+			nil,
+		)
+		require.NoError(t, err)
+
+		place3, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Another Occupied Bag",
+			1200,
+			&orderID2,
+		)
+		require.NoError(t, err)
+
+		storagePlaces := []*courier.StoragePlace{place1, place2, place3}
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+
+		require.NoError(t, err)
+		assert.NotNil(t, c)
+
+		restoredPlaces := c.StoragePlaces()
+		require.Len(t, restoredPlaces, 3)
+
+		// Verify occupied storage places
+		assert.NotNil(t, restoredPlaces[0].OrderID())
+		assert.True(t, restoredPlaces[0].OrderID().IsEqual(orderID1))
+		assert.Nil(t, restoredPlaces[1].OrderID())
+		assert.NotNil(t, restoredPlaces[2].OrderID())
+		assert.True(t, restoredPlaces[2].OrderID().IsEqual(orderID2))
+
+		require.NoError(t, c.Validate())
+	})
+
+	t.Run("should return error for invalid ID", func(t *testing.T) {
+		var invalidID kernel.UUID
+		storagePlaces := createValidStoragePlaces(t)
+
+		c, err := courier.RestoreCourier(invalidID, validName, validSpeed, validLocation, storagePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+		assert.Contains(t, err.Error(), "UUID")
+	})
+
+	t.Run("should return error for empty name", func(t *testing.T) {
+		storagePlaces := createValidStoragePlaces(t)
+
+		c, err := courier.RestoreCourier(validID, "", validSpeed, validLocation, storagePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+		assert.Contains(t, err.Error(), "name")
+	})
+
+	t.Run("should return error for invalid speed", func(t *testing.T) {
+		storagePlaces := createValidStoragePlaces(t)
+
+		testCases := []struct {
+			name  string
+			speed int
+		}{
+			{"zero speed", 0},
+			{"negative speed", -1},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				c, err := courier.RestoreCourier(validID, validName, tc.speed, validLocation, storagePlaces)
+
+				require.Error(t, err)
+				assert.Nil(t, c)
+				assert.Contains(t, err.Error(), "speed")
+			})
+		}
+	})
+
+	t.Run("should return error for invalid location", func(t *testing.T) {
+		var invalidLocation kernel.Location
+		storagePlaces := createValidStoragePlaces(t)
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, invalidLocation, storagePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+		assert.Contains(t, err.Error(), "Location")
+	})
+
+	t.Run("should return error for empty storage places", func(t *testing.T) {
+		var emptyStoragePlaces []*courier.StoragePlace
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, emptyStoragePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+		assert.Contains(t, err.Error(), "storage places are required")
+	})
+
+	t.Run("should return error for nil storage places slice", func(t *testing.T) {
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, nil)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+		assert.Contains(t, err.Error(), "storage places are required")
+	})
+
+	t.Run("should return error for invalid storage place", func(t *testing.T) {
+		// Create one valid and one invalid storage place
+		validPlace, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Valid Place",
+			1000,
+			nil,
+		)
+		require.NoError(t, err)
+
+		var invalidID kernel.UUID
+		invalidPlace, err := courier.RestoreStoragePlace(
+			invalidID,
+			"Invalid Place",
+			500,
+			nil,
+		)
+		require.Error(t, err)
+		require.Nil(t, invalidPlace)
+
+		// Since we can't create an invalid storage place, we'll test with nil
+		storagePlaces := []*courier.StoragePlace{validPlace, nil}
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+	})
+
+	t.Run("should aggregate multiple validation errors", func(t *testing.T) {
+		var invalidID kernel.UUID
+		var invalidLocation kernel.Location
+		var emptyStoragePlaces []*courier.StoragePlace
+
+		c, err := courier.RestoreCourier(invalidID, "", -1, invalidLocation, emptyStoragePlaces)
+
+		require.Error(t, err)
+		assert.Nil(t, c)
+
+		// Should contain multiple error messages
+		errStr := err.Error()
+		assert.Contains(t, errStr, "UUID")
+		assert.Contains(t, errStr, "name")
+		assert.Contains(t, errStr, "speed")
+		assert.Contains(t, errStr, "Location")
+		assert.Contains(t, errStr, "storage places")
+	})
+
+	t.Run("restored courier should be fully functional", func(t *testing.T) {
+		storagePlaces := createValidStoragePlaces(t)
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+		require.NoError(t, err)
+
+		// Should be able to take orders
+		order := createValidOrder(t, 500)
+		canTake, err := c.CanTakeOrder(order)
+		require.NoError(t, err)
+		assert.True(t, canTake)
+
+		err = c.TakeOrder(order)
+		require.NoError(t, err)
+
+		// Should be able to move
+		newLocation := createValidLocation(t, 9, 10)
+		err = c.Move(newLocation)
+		require.NoError(t, err)
+
+		// Should be able to complete orders
+		err = c.CompleteOrder(order.ID())
+		require.NoError(t, err)
+
+		// Should be able to add more storage
+		err = c.AddStoragePlace("Extra Bag", 300)
+		require.NoError(t, err)
+
+		updatedPlaces := c.StoragePlaces()
+		assert.Len(t, updatedPlaces, 3) // Original 2 + 1 new
+	})
+
+	t.Run("restored courier with occupied storage should handle order operations correctly", func(t *testing.T) {
+		// Create storage places with one occupied
+		occupiedOrderID := kernel.NewUUID()
+		occupiedPlace, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Occupied Storage",
+			1000,
+			&occupiedOrderID,
+		)
+		require.NoError(t, err)
+
+		emptyPlace, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Empty Storage",
+			500,
+			nil,
+		)
+		require.NoError(t, err)
+
+		storagePlaces := []*courier.StoragePlace{occupiedPlace, emptyPlace}
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+		require.NoError(t, err)
+
+		// Should be able to take a new order (in empty storage)
+		newOrder := createValidOrder(t, 400)
+		canTake, err := c.CanTakeOrder(newOrder)
+		require.NoError(t, err)
+		assert.True(t, canTake)
+
+		err = c.TakeOrder(newOrder)
+		require.NoError(t, err)
+
+		// Should be able to complete the pre-existing order
+		err = c.CompleteOrder(occupiedOrderID)
+		require.NoError(t, err)
+
+		// Should be able to complete the new order
+		err = c.CompleteOrder(newOrder.ID())
+		require.NoError(t, err)
+
+		// All storage should now be empty
+		places := c.StoragePlaces()
+		for _, place := range places {
+			assert.Nil(t, place.OrderID())
+		}
+	})
+
+	t.Run("comparison with NewCourier for basic functionality", func(t *testing.T) {
+		// Create courier using NewCourier
+		newCourier, err := courier.NewCourier(validID, validName, validSpeed, validLocation)
+		require.NoError(t, err)
+
+		// Create storage places similar to what NewCourier creates (one default bag)
+		defaultPlace, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Сумка", // Same name as default bag
+			10,      // Same volume as default bag
+			nil,
+		)
+		require.NoError(t, err)
+
+		restoredCourier, err := courier.RestoreCourier(
+			validID,
+			validName,
+			validSpeed,
+			validLocation,
+			[]*courier.StoragePlace{defaultPlace},
+		)
+		require.NoError(t, err)
+
+		// Both should have same basic properties (except storage place IDs will differ)
+		assert.True(t, newCourier.ID().IsEqual(restoredCourier.ID()))
+		assert.Equal(t, newCourier.Name(), restoredCourier.Name())
+		assert.Equal(t, newCourier.Speed(), restoredCourier.Speed())
+		newLocationEqual, err := newCourier.Location().IsEqual(restoredCourier.Location())
+		require.NoError(t, err)
+		assert.True(t, newLocationEqual)
+
+		// Both should have same number of storage places
+		newPlaces := newCourier.StoragePlaces()
+		restoredPlaces := restoredCourier.StoragePlaces()
+		assert.Len(t, newPlaces, 1)
+		assert.Len(t, restoredPlaces, 1)
+
+		// Storage places should have same properties (except IDs)
+		assert.Equal(t, newPlaces[0].Name(), restoredPlaces[0].Name())
+		assert.Equal(t, newPlaces[0].TotalVolume(), restoredPlaces[0].TotalVolume())
+		assert.Equal(t, newPlaces[0].OrderID(), restoredPlaces[0].OrderID()) // Both nil
+
+		// Both should behave identically for order operations
+		order1 := createValidOrder(t, 8)
+		order2 := createValidOrder(t, 8)
+
+		canTakeNew, err := newCourier.CanTakeOrder(order1)
+		require.NoError(t, err)
+		canTakeRestored, err := restoredCourier.CanTakeOrder(order2)
+		require.NoError(t, err)
+		assert.Equal(t, canTakeNew, canTakeRestored)
+	})
+
+	t.Run("should handle large number of storage places", func(t *testing.T) {
+		// Create many storage places
+		var storagePlaces []*courier.StoragePlace
+		for i := range 50 {
+			place, err := courier.RestoreStoragePlace(
+				kernel.NewUUID(),
+				fmt.Sprintf("Storage_%d", i),
+				100+i*10, // Varying volumes
+				nil,
+			)
+			require.NoError(t, err)
+			storagePlaces = append(storagePlaces, place)
+		}
+
+		c, err := courier.RestoreCourier(validID, validName, validSpeed, validLocation, storagePlaces)
+
+		require.NoError(t, err)
+		assert.NotNil(t, c)
+
+		restoredPlaces := c.StoragePlaces()
+		assert.Len(t, restoredPlaces, 50)
+
+		// Should be able to take many orders
+		for range 10 {
+			order := createValidOrder(t, 50) // Small orders that fit in any storage
+			canTake, takeErr := c.CanTakeOrder(order)
+			require.NoError(t, takeErr)
+			assert.True(t, canTake)
+
+			takeErr = c.TakeOrder(order)
+			require.NoError(t, takeErr)
+		}
+	})
+
+	t.Run("boundary value testing for storage places", func(t *testing.T) {
+		// Test with exactly one storage place (minimum)
+		singlePlace, err := courier.RestoreStoragePlace(
+			kernel.NewUUID(),
+			"Single Storage",
+			1,
+			nil,
+		)
+		require.NoError(t, err)
+
+		c, err := courier.RestoreCourier(
+			validID,
+			validName,
+			validSpeed,
+			validLocation,
+			[]*courier.StoragePlace{singlePlace},
+		)
+
+		require.NoError(t, err)
+		assert.NotNil(t, c)
+		assert.Len(t, c.StoragePlaces(), 1)
+		require.NoError(t, c.Validate())
+	})
+}

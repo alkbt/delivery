@@ -86,6 +86,73 @@ func NewOrder(id kernel.UUID, location kernel.Location, volume int) (*Order, err
 	return order, nil
 }
 
+// RestoreOrder reconstructs an Order aggregate from persistent storage.
+// Unlike NewOrder which creates orders in Created status, this constructor restores
+// an order to its previously persisted state, including status and courier assignment.
+//
+// This function enables loading complete order aggregates from the database while
+// preserving their operational state at the time of persistence. The restored order
+// behaves identically to one created through normal domain operations.
+//
+// Parameters:
+//   - id: Unique identifier for the order
+//   - location: Delivery destination coordinates
+//   - volume: Order size/weight
+//   - status: Current order status
+//   - courierID: Assigned courier ID (nil if unassigned)
+//
+// Returns:
+//   - *Order: Restored order aggregate
+//   - error: Validation error if any parameter is invalid or state is inconsistent
+//
+// Business Rules:
+//   - Order ID must be valid
+//   - Location must be valid coordinates
+//   - Volume must be positive
+//   - Status must be valid enum value
+//   - Courier assignment must be consistent with status
+//
+// Examples:
+//
+//	// Restore unassigned order
+//	order, err := RestoreOrder(id, location, 100, order.Created, nil)
+//	if err != nil {
+//	    return fmt.Errorf("restoration failed: %w", err)
+//	}
+//
+//	// Restore assigned order
+//	order, err := RestoreOrder(id, location, 100, order.Assigned, &courierID)
+//	if err != nil {
+//	    return fmt.Errorf("restoration failed: %w", err)
+//	}
+func RestoreOrder(
+	id kernel.UUID,
+	location kernel.Location,
+	volume int,
+	status Status,
+	courierID *kernel.UUID,
+) (*Order, error) {
+	order := &Order{
+		guard: kernel.NewConstructorGuard(),
+	}
+
+	if err := errors.Join(
+		order.setID(id),
+		order.setLocation(location),
+		order.setVolume(volume),
+		order.setStatus(status),
+		order.setCourierID(courierID),
+	); err != nil {
+		return nil, err
+	}
+
+	if err := order.ValidateSetStatusCourier(); err != nil {
+		return nil, err
+	}
+
+	return order, nil
+}
+
 // Validate ensures the Order instance was properly constructed through NewOrder.
 // This prevents bypassing validation by directly instantiating the struct.
 //
@@ -267,4 +334,33 @@ func (o *Order) setVolume(volume int) error {
 	}
 	o.volume = volume
 	return nil
+}
+
+// setStatus sets the order status with validation.
+// Used during order restoration to establish the persisted status.
+func (o *Order) setStatus(status Status) error {
+	if err := status.Validate(); err != nil {
+		return err
+	}
+	o.status = status
+	return nil
+}
+
+// setCourierID sets the assigned courier ID with validation.
+// Used during order restoration to establish courier assignment from persistent state.
+func (o *Order) setCourierID(id *kernel.UUID) error {
+	if id != nil {
+		if err := id.Validate(); err != nil {
+			return err
+		}
+	}
+
+	o.courierID = id
+	return nil
+}
+
+// ValidateSetStatusCourier validates consistency between order status and courier assignment.
+// Used during order restoration to ensure the persisted state is valid.
+func (o *Order) ValidateSetStatusCourier() error {
+	return o.status.ValidateCanHaveCourier(o.courierID != nil)
 }

@@ -115,6 +115,71 @@ func NewCourier(id kernel.UUID, name string, speed int, location kernel.Location
 	return courier, nil
 }
 
+// RestoreCourier reconstructs a Courier aggregate from persistent storage.
+// Unlike NewCourier which creates fresh couriers with default storage, this constructor
+// restores a courier to its previously persisted state, including all storage places
+// and their occupancy status.
+//
+// This function enables loading complete courier aggregates from the database while
+// preserving their operational state at the time of persistence. The restored courier
+// behaves identically to one created through normal domain operations.
+//
+// Parameters:
+//   - id: Unique identifier for the courier
+//   - name: Human-readable courier name
+//   - speed: Movement speed in steps per turn
+//   - location: Current position on delivery grid
+//   - storagePlaces: Collection of storage places belonging to this courier
+//
+// Returns:
+//   - *Courier: Restored courier aggregate
+//   - error: Validation error if any parameter is invalid
+//
+// Business Rules:
+//   - Courier ID must be valid
+//   - Name cannot be empty
+//   - Speed must be positive
+//   - Location must be valid coordinates
+//   - Must have at least one storage place
+//   - All storage places must be valid
+//
+// Examples:
+//
+//	// Restore courier with storage places
+//	courier, err := RestoreCourier(
+//	    courierID,
+//	    "Alice Johnson",
+//	    3,
+//	    location,
+//	    storagePlaces,
+//	)
+//	if err != nil {
+//	    return fmt.Errorf("restoration failed: %w", err)
+//	}
+func RestoreCourier(
+	id kernel.UUID,
+	name string,
+	speed int,
+	location kernel.Location,
+	storagePlaces []*StoragePlace,
+) (*Courier, error) {
+	courier := &Courier{
+		guard: kernel.NewConstructorGuard(),
+	}
+
+	if err := errors.Join(
+		courier.setID(id),
+		courier.setName(name),
+		courier.setSpeed(speed),
+		courier.setLocation(location),
+		courier.setStoragePlaces(storagePlaces),
+	); err != nil {
+		return nil, err
+	}
+
+	return courier, nil
+}
+
 // IsEqual compares two couriers for equality based on their unique identifiers.
 // Two couriers are considered equal if they have the same ID, regardless of other attributes.
 // This method is used for courier identification and deduplication.
@@ -603,6 +668,25 @@ func (c *Courier) setLocation(location kernel.Location) error {
 	}
 
 	c.location = location
+	return nil
+}
+
+// setStoragePlaces sets the courier's storage places collection.
+// Used during courier restoration to establish the storage places from persistent state.
+// Validates that the collection is not empty and all storage places are valid.
+func (c *Courier) setStoragePlaces(storagePlaces []*StoragePlace) error {
+	if len(storagePlaces) == 0 {
+		return errs.NewValueIsRequiredError("storage places are required")
+	}
+
+	for _, sp := range storagePlaces {
+		if err := sp.Validate(); err != nil {
+			return err
+		}
+	}
+
+	c.storagePlaces = make([]*StoragePlace, len(storagePlaces))
+	copy(c.storagePlaces, storagePlaces)
 	return nil
 }
 

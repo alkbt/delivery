@@ -132,6 +132,37 @@ func (s Status) ValidateAssign() error {
 	return nil
 }
 
+// ValidateCanHaveCourier validates the consistency between order status and courier assignment.
+// Enforces business rules about which statuses require courier assignment.
+//
+// Business Rules:
+//   - Created orders must not have a courier assigned
+//   - Assigned orders must have a courier assigned
+//   - Completed orders must have a courier assigned
+//
+// Parameters:
+//   - courier: whether the order has a courier assigned
+//
+// Returns:
+//   - error: validation error if status and courier assignment are inconsistent
+func (s Status) ValidateCanHaveCourier(courier bool) error {
+	if courier && s != Assigned && s != Completed {
+		return errs.NewValueIsInvalidErrorWithCause(
+			"status is invalid",
+			fmt.Errorf("%s is not a valid status to have a courier", s.String()),
+		)
+	}
+
+	if !courier && (s == Assigned || s == Completed) {
+		return errs.NewValueIsInvalidErrorWithCause(
+			"status is invalid",
+			fmt.Errorf("%s is not a valid status to have no courier", s.String()),
+		)
+	}
+
+	return nil
+}
+
 // Assign transitions the status to Assigned.
 //
 // Valid transitions:
