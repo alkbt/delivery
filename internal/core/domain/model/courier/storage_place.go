@@ -113,6 +113,60 @@ func NewStoragePlace(id kernel.UUID, name string, totalVolume int) (*StoragePlac
 	return place, nil
 }
 
+// RestoreStoragePlace reconstructs a StoragePlace entity from persistent storage.
+// Unlike NewStoragePlace which creates empty storage places, this constructor restores
+// a storage place to its previously persisted state, including any stored order.
+//
+// This function enables loading storage places from the database while preserving
+// their operational state at the time of persistence. The restored storage place
+// behaves identically to one created through normal domain operations.
+//
+// Parameters:
+//   - id: Unique identifier for the storage place
+//   - name: Human-readable name for the storage place
+//   - totalVolume: Maximum volume capacity
+//   - orderID: ID of currently stored order (nil if empty)
+//
+// Returns:
+//   - *StoragePlace: Restored storage place entity
+//   - error: Validation error if any parameter is invalid
+//
+// Business Rules:
+//   - Storage place ID must be valid
+//   - Name cannot be empty
+//   - Total volume must be positive
+//   - Order ID, if provided, must be valid
+//
+// Examples:
+//
+//	// Restore empty storage place
+//	place, err := RestoreStoragePlace(id, "Main Bag", 1000, nil)
+//	if err != nil {
+//	    return fmt.Errorf("restoration failed: %w", err)
+//	}
+//
+//	// Restore occupied storage place
+//	place, err := RestoreStoragePlace(id, "Side Pouch", 500, &orderID)
+//	if err != nil {
+//	    return fmt.Errorf("restoration failed: %w", err)
+//	}
+func RestoreStoragePlace(id kernel.UUID, name string, totalVolume int, orderID *kernel.UUID) (*StoragePlace, error) {
+	place := &StoragePlace{
+		guard: kernel.NewConstructorGuard(),
+	}
+
+	if err := errors.Join(
+		place.setID(id),
+		place.setName(name),
+		place.setTotalVolume(totalVolume),
+		place.setOrderID(orderID),
+	); err != nil {
+		return nil, err
+	}
+
+	return place, nil
+}
+
 // IsEqual compares two StoragePlace entities for equality based on their unique identifiers.
 // Two storage places are considered equal if they have the same ID, following DDD principles
 // where entity equality is determined by identity, not by attribute values.
@@ -316,6 +370,19 @@ func (s *StoragePlace) setTotalVolume(totalVolume int) error {
 	}
 
 	s.totalVolume = totalVolume
+	return nil
+}
+
+// setOrderID sets the stored order ID for this storage place.
+// Used during entity restoration to establish the occupied state.
+func (s *StoragePlace) setOrderID(orderID *kernel.UUID) error {
+	if orderID != nil {
+		if err := orderID.Validate(); err != nil {
+			return err
+		}
+	}
+
+	s.orderID = orderID
 	return nil
 }
 
