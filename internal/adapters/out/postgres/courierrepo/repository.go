@@ -20,7 +20,7 @@ type GormCourierRepository struct {
 
 // aggregateTracker defines the interface for tracking aggregates.
 type aggregateTracker interface {
-	TrackAggregate(id kernel.UUID, aggregate interface{})
+	TrackAggregate(id kernel.UUID, aggregate any)
 }
 
 // NewGormCourierRepository creates a new GORM courier repository.

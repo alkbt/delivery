@@ -19,7 +19,7 @@ type GormOrderRepository struct {
 
 // aggregateTracker defines the interface for tracking aggregates.
 type aggregateTracker interface {
-	TrackAggregate(id kernel.UUID, aggregate interface{})
+	TrackAggregate(id kernel.UUID, aggregate any)
 }
 
 // NewGormOrderRepository creates a new GORM order repository.

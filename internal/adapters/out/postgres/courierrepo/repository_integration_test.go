@@ -27,7 +27,7 @@ type MockAggregateTracker struct {
 	mock.Mock
 }
 
-func (m *MockAggregateTracker) TrackAggregate(id kernel.UUID, aggregate interface{}) {
+func (m *MockAggregateTracker) TrackAggregate(id kernel.UUID, aggregate any) {
 	m.Called(id, aggregate)
 }
 

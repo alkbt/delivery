@@ -25,7 +25,7 @@ type MockAggregateTracker struct {
 	mock.Mock
 }
 
-func (m *MockAggregateTracker) TrackAggregate(id kernel.UUID, aggregate interface{}) {
+func (m *MockAggregateTracker) TrackAggregate(id kernel.UUID, aggregate any) {
 	m.Called(id, aggregate)
 }
 
@@ -427,10 +427,10 @@ func (suite *OrderRepositoryIntegrationTestSuite) setupMockExpectationsForNonAss
 func (suite *OrderRepositoryIntegrationTestSuite) createTestOrdersWithDifferentStatuses(
 	ctx context.Context,
 ) []*order.Order {
-	var orders []*order.Order
-
 	// Create orders in different statuses
 	statuses := []order.Status{order.Created, order.Created, order.Assigned, order.Assigned, order.Completed}
+
+	orders := make([]*order.Order, 0, len(statuses))
 
 	for i, status := range statuses {
 		location, err := kernel.NewLocation(kernel.Coordinate(1+i%10), kernel.Coordinate(1+(i*2)%10))

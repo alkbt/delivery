@@ -86,7 +86,7 @@ import (
 // This is useful for implementing patterns like event sourcing or outbox pattern.
 type trackedAggregate struct {
 	ID        kernel.UUID
-	Aggregate interface{} // Will be changed to a common Aggregate interface in the future
+	Aggregate any // Will be changed to a common Aggregate interface in the future
 }
 
 // GormUnitOfWorkFactory creates UnitOfWork instances using GORM database connections.
@@ -144,6 +144,8 @@ func NewGormUnitOfWorkFactory(db *gorm.DB) *GormUnitOfWorkFactory {
 //	}
 //
 //	return uow.Commit(ctx)
+//
+//nolint:ireturn // Factory returns interface for proper abstraction
 func (f *GormUnitOfWorkFactory) Create() ports.UnitOfWork {
 	return &GormUnitOfWork{
 		db:                f.db,
@@ -300,6 +302,8 @@ func (uow *GormUnitOfWork) Rollback(_ context.Context) error {
 //	}
 //
 //	uow.Commit(ctx)
+//
+//nolint:ireturn // Repository returns interface for proper abstraction
 func (uow *GormUnitOfWork) CourierRepository() ports.CourierRepository {
 	db := uow.db
 	if uow.tx != nil {
@@ -328,6 +332,8 @@ func (uow *GormUnitOfWork) CourierRepository() ports.CourierRepository {
 //	}
 //
 //	uow.Commit(ctx)
+//
+//nolint:ireturn // Repository returns interface for proper abstraction
 func (uow *GormUnitOfWork) OrderRepository() ports.OrderRepository {
 	db := uow.db
 	if uow.tx != nil {
@@ -356,7 +362,7 @@ func (uow *GormUnitOfWork) OrderRepository() ports.OrderRepository {
 //	    r.tracker.TrackAggregate(order.ID(), order)
 //	    return nil
 //	}
-func (uow *GormUnitOfWork) TrackAggregate(id kernel.UUID, aggregate interface{}) {
+func (uow *GormUnitOfWork) TrackAggregate(id kernel.UUID, aggregate any) {
 	uow.trackedAggregates = append(uow.trackedAggregates, trackedAggregate{
 		ID:        id,
 		Aggregate: aggregate,
