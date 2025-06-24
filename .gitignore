@@ -24,3 +24,5 @@ tmp/*
 .DS_Store
 
 coverage.html
+
+.cursor/
