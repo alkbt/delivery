@@ -1,10 +1,10 @@
-package kernel_test
+package guard_test
 
 import (
 	"errors"
 	"testing"
 
-	"delivery/internal/core/domain/model/kernel"
+	"delivery/internal/pkg/guard"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,7 +13,7 @@ import (
 func TestNewConstructorGuard(t *testing.T) {
 	t.Run("creates_properly_constructed_guard", func(t *testing.T) {
 		// When
-		guard := kernel.NewConstructorGuard()
+		guard := guard.NewConstructorGuard()
 
 		// Then
 		assert.NotNil(t, guard)
@@ -30,7 +30,7 @@ func TestNewConstructorGuard(t *testing.T) {
 func TestConstructorGuard_Validate(t *testing.T) {
 	t.Run("properly_constructed_guard_returns_nil", func(t *testing.T) {
 		// Given
-		guard := kernel.NewConstructorGuard()
+		guard := guard.NewConstructorGuard()
 		customError := errors.New("not constructed")
 
 		// When
@@ -42,7 +42,7 @@ func TestConstructorGuard_Validate(t *testing.T) {
 
 	t.Run("zero_value_guard_returns_custom_error", func(t *testing.T) {
 		// Given
-		var guard kernel.ConstructorGuard // zero value
+		var guard guard.ConstructorGuard // zero value
 		expectedError := errors.New("entity not constructed")
 
 		// When
@@ -55,14 +55,14 @@ func TestConstructorGuard_Validate(t *testing.T) {
 
 	t.Run("zero_value_guard_returns_default_error_when_nil", func(t *testing.T) {
 		// Given
-		var guard kernel.ConstructorGuard // zero value
+		var g guard.ConstructorGuard // zero value
 
 		// When
-		err := guard.Validate(nil)
+		err := g.Validate(nil)
 
 		// Then
 		require.Error(t, err)
-		assert.Equal(t, kernel.ErrDefaultConstructorGuard, err)
+		assert.Equal(t, guard.ErrDefaultConstructorGuard, err)
 	})
 }
 
@@ -73,7 +73,7 @@ func TestConstructorGuardUsageExample(t *testing.T) {
 	type Money struct {
 		amount   int
 		currency string
-		guard    kernel.ConstructorGuard
+		guard    guard.ConstructorGuard
 	}
 
 	var errMoneyNotConstructed = errors.New("Money must be created via NewMoney")
@@ -88,7 +88,7 @@ func TestConstructorGuardUsageExample(t *testing.T) {
 		return Money{
 			amount:   amount,
 			currency: currency,
-			guard:    kernel.NewConstructorGuard(),
+			guard:    guard.NewConstructorGuard(),
 		}, nil
 	}
 
@@ -140,12 +140,12 @@ func TestConstructorGuardRealWorldExample(t *testing.T) {
 
 	// Define a guard-aware base type
 	type guardedProduct struct {
-		guard kernel.ConstructorGuard
+		guard guard.ConstructorGuard
 	}
 
 	newGuardedProduct := func() guardedProduct {
 		return guardedProduct{
-			guard: kernel.NewConstructorGuard(),
+			guard: guard.NewConstructorGuard(),
 		}
 	}
 
@@ -233,7 +233,7 @@ func TestConstructorGuardWithMultipleErrors(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Given
-			guard := kernel.NewConstructorGuard()
+			guard := guard.NewConstructorGuard()
 
 			// When
 			err := guard.Validate(tc.expectedError)
@@ -248,21 +248,21 @@ func TestConstructorGuardWithMultipleErrors(t *testing.T) {
 func TestConstructorGuardDefaultError(t *testing.T) {
 	t.Run("nil_error_uses_default_for_zero_value", func(t *testing.T) {
 		// Given
-		var guard kernel.ConstructorGuard // zero value
+		var g guard.ConstructorGuard // zero value
 
 		// When
-		err := guard.Validate(nil)
+		err := g.Validate(nil)
 
 		// Then
 		require.Error(t, err)
-		assert.Equal(t, kernel.ErrDefaultConstructorGuard, err)
+		assert.Equal(t, guard.ErrDefaultConstructorGuard, err)
 	})
 
 	t.Run("default_error_constant_has_meaningful_message", func(t *testing.T) {
 		// Then
-		require.Error(t, kernel.ErrDefaultConstructorGuard)
-		assert.Contains(t, kernel.ErrDefaultConstructorGuard.Error(), "constructor")
-		assert.Equal(t, "object must be created via its constructor", kernel.ErrDefaultConstructorGuard.Error())
+		require.Error(t, guard.ErrDefaultConstructorGuard)
+		assert.Contains(t, guard.ErrDefaultConstructorGuard.Error(), "constructor")
+		assert.Equal(t, "object must be created via its constructor", guard.ErrDefaultConstructorGuard.Error())
 	})
 }
 
@@ -271,12 +271,12 @@ func BenchmarkConstructorGuard(b *testing.B) {
 	b.Run("NewConstructorGuard", func(b *testing.B) {
 		b.ResetTimer()
 		for range b.N {
-			_ = kernel.NewConstructorGuard()
+			_ = guard.NewConstructorGuard()
 		}
 	})
 
 	b.Run("Validate_Success", func(b *testing.B) {
-		guard := kernel.NewConstructorGuard()
+		guard := guard.NewConstructorGuard()
 		err := errors.New("not constructed")
 		b.ResetTimer()
 		for range b.N {
@@ -285,7 +285,7 @@ func BenchmarkConstructorGuard(b *testing.B) {
 	})
 
 	b.Run("Validate_ZeroValue", func(b *testing.B) {
-		var guard kernel.ConstructorGuard
+		var guard guard.ConstructorGuard
 		err := errors.New("not constructed")
 		b.ResetTimer()
 		for range b.N {
@@ -296,7 +296,7 @@ func BenchmarkConstructorGuard(b *testing.B) {
 
 // TestConstructorGuardConcurrency verifies that ConstructorGuard is safe for concurrent use.
 func TestConstructorGuardConcurrency(t *testing.T) {
-	guard := kernel.NewConstructorGuard()
+	guard := guard.NewConstructorGuard()
 	validationError := errors.New("not constructed")
 
 	// Run multiple goroutines that validate the guard concurrently
@@ -322,22 +322,22 @@ func TestConstructorGuardImmutability(t *testing.T) {
 	t.Run("guard_fields_are_not_modifiable", func(t *testing.T) {
 		// Given
 		originalError := errors.New("original error")
-		guard := kernel.NewConstructorGuard()
+		g := guard.NewConstructorGuard()
 
 		// When
 		// Try to create another guard
 		anotherError := errors.New("another error")
-		_ = kernel.NewConstructorGuard()
+		_ = guard.NewConstructorGuard()
 
 		// Then
 		// Original guard should still validate successfully
-		require.NoError(t, guard.Validate(originalError))
-		require.NoError(t, guard.Validate(anotherError))
+		require.NoError(t, g.Validate(originalError))
+		require.NoError(t, g.Validate(anotherError))
 	})
 
 	t.Run("guard_can_be_safely_passed_by_value", func(t *testing.T) {
 		// Given
-		guard := kernel.NewConstructorGuard()
+		guard := guard.NewConstructorGuard()
 		testError := errors.New("test error")
 
 		// When

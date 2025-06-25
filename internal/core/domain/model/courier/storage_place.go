@@ -6,6 +6,7 @@ import (
 
 	"delivery/internal/core/domain/model/kernel"
 	"delivery/internal/pkg/errs"
+	"delivery/internal/pkg/guard"
 )
 
 var (
@@ -72,7 +73,7 @@ type StoragePlace struct {
 	orderID *kernel.UUID
 
 	// guard ensures the entity was properly initialized
-	guard kernel.ConstructorGuard
+	guard guard.ConstructorGuard
 }
 
 // NewStoragePlace creates a new StoragePlace entity with the specified parameters.
@@ -103,7 +104,7 @@ type StoragePlace struct {
 //	}
 func NewStoragePlace(id kernel.UUID, name string, totalVolume int) (*StoragePlace, error) {
 	place := &StoragePlace{
-		guard: kernel.NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(place.setID(id), place.setName(name), place.setTotalVolume(totalVolume)); err != nil {
@@ -152,7 +153,7 @@ func NewStoragePlace(id kernel.UUID, name string, totalVolume int) (*StoragePlac
 //	}
 func RestoreStoragePlace(id kernel.UUID, name string, totalVolume int, orderID *kernel.UUID) (*StoragePlace, error) {
 	place := &StoragePlace{
-		guard: kernel.NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(

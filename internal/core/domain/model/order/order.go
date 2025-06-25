@@ -6,6 +6,7 @@ import (
 
 	"delivery/internal/core/domain/model/kernel"
 	"delivery/internal/pkg/errs"
+	"delivery/internal/pkg/guard"
 )
 
 var (
@@ -43,7 +44,7 @@ type Order struct {
 	status Status
 
 	// guard ensures the order was created via NewOrder
-	guard kernel.ConstructorGuard
+	guard guard.ConstructorGuard
 }
 
 // NewOrder creates a new Order instance with validation. This is the only way to create
@@ -72,7 +73,7 @@ type Order struct {
 func NewOrder(id kernel.UUID, location kernel.Location, volume int) (*Order, error) {
 	order := &Order{
 		status: Created,
-		guard:  kernel.NewConstructorGuard(),
+		guard:  guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(
@@ -133,7 +134,7 @@ func RestoreOrder(
 	courierID *kernel.UUID,
 ) (*Order, error) {
 	order := &Order{
-		guard: kernel.NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(

@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 
 	"delivery/internal/pkg/errs"
+	"delivery/internal/pkg/guard"
 )
 
 // Coordinate represents a position value on the delivery grid.
@@ -42,7 +43,7 @@ var ErrLocationIsNotConstructed = errs.NewValueIsRequiredError(
 type Location struct { //nolint:recvcheck //using for validation
 	x     Coordinate
 	y     Coordinate
-	guard ConstructorGuard
+	guard guard.ConstructorGuard
 }
 
 // NewLocation creates a new Location with the specified coordinates.
@@ -66,7 +67,7 @@ type Location struct { //nolint:recvcheck //using for validation
 //	// loc is now ready to use
 func NewLocation(x Coordinate, y Coordinate) (Location, error) {
 	loc := Location{
-		guard: NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(loc.setX(x), loc.setY(y)); err != nil {

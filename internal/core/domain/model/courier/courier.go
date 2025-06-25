@@ -6,6 +6,7 @@ import (
 	"delivery/internal/core/domain/model/kernel"
 	"delivery/internal/core/domain/model/order"
 	"delivery/internal/pkg/errs"
+	"delivery/internal/pkg/guard"
 )
 
 const (
@@ -65,7 +66,7 @@ type Courier struct {
 	// storagePlaces are the available storage containers for carrying orders
 	storagePlaces []*StoragePlace
 	// guard ensures the courier was properly constructed
-	guard kernel.ConstructorGuard
+	guard guard.ConstructorGuard
 }
 
 // NewCourier creates a new Courier with the specified parameters.
@@ -99,7 +100,7 @@ type Courier struct {
 //	fmt.Printf("Created courier: %s at %s", courier.Name(), courier.Location())
 func NewCourier(id kernel.UUID, name string, speed int, location kernel.Location) (*Courier, error) {
 	courier := &Courier{
-		guard: kernel.NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(
@@ -164,7 +165,7 @@ func RestoreCourier(
 	storagePlaces []*StoragePlace,
 ) (*Courier, error) {
 	courier := &Courier{
-		guard: kernel.NewConstructorGuard(),
+		guard: guard.NewConstructorGuard(),
 	}
 
 	if err := errors.Join(
