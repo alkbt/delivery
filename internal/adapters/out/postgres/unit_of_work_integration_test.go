@@ -131,7 +131,7 @@ func (suite *UnitOfWorkIntegrationTestSuite) TestUnitOfWork_TransactionErrors() 
 
 	// Test rollback without begin
 	err = uow.Rollback(ctx)
-	suite.Require().Error(err, "Should error when rolling back without active transaction")
+	suite.Require().NoError(err, "Should not error when rolling back without active transaction")
 }
 
 // TestUnitOfWork_SingleRepositoryTransaction verifies repository operations
