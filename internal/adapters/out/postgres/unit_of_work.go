@@ -251,7 +251,10 @@ func (uow *GormUnitOfWork) Commit(_ context.Context) error {
 // Database returns to its state before the transaction began.
 // After rollback, the transaction is closed and cannot be reused.
 //
-// Returns error if no active transaction exists or if the rollback operation fails.
+// If no active transaction exists, this method does nothing and returns no error.
+// This allows clients to safely call Rollback in defer statements without error checking.
+//
+// Returns error only if the rollback operation fails on an active transaction.
 //
 // Example:
 //
@@ -261,20 +264,16 @@ func (uow *GormUnitOfWork) Commit(_ context.Context) error {
 //	}
 //
 //	defer func() {
-//	    if r := recover(); r != nil {
-//	        uow.Rollback(ctx)
-//	        panic(r)
-//	    }
+//	    uow.Rollback(ctx) // Safe to call without error checking
 //	}()
 //
 //	// If any operation fails, rollback the transaction
 //	if err := uow.OrderRepository().Add(ctx, order); err != nil {
-//	    uow.Rollback(ctx)
 //	    return err
 //	}
 func (uow *GormUnitOfWork) Rollback(_ context.Context) error {
 	if uow.tx == nil {
-		return gorm.ErrInvalidTransaction
+		return nil // No active transaction, nothing to rollback
 	}
 
 	err := uow.tx.Rollback().Error
