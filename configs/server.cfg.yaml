@@ -1,7 +1,9 @@
-# yaml-language-servers: ...
 package: servers
-output: generated/servers/servers.gen.go
+output: internal/generated/servers/servers.gen.go
 generate:
-  echo-server: true
-  embedded-spec: true
-  models: true
+  - types
+  - echo-server
+  - embedded-spec
+  - models
+  - strict-server
+import-mapping: {}

@@ -85,7 +85,7 @@ func (r *GormOrderRepository) Get(ctx context.Context, id kernel.UUID) (*order.O
 // GetFirstInCreatedStatus retrieves the first order with Created status.
 func (r *GormOrderRepository) GetFirstInCreatedStatus(ctx context.Context) (*order.Order, error) {
 	var dto OrderDTO
-	if err := r.db.WithContext(ctx).First(&dto, "status = ?", order.Created).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&dto, "status = ?", int(order.Created)).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errs.NewObjectNotFoundError("order", "first in created status")
 		}
@@ -98,7 +98,7 @@ func (r *GormOrderRepository) GetFirstInCreatedStatus(ctx context.Context) (*ord
 // GetAllInAssignedStatus retrieves all orders with Assigned status.
 func (r *GormOrderRepository) GetAllInAssignedStatus(ctx context.Context) ([]*order.Order, error) {
 	var dtos []OrderDTO
-	if err := r.db.WithContext(ctx).Find(&dtos, "status = ?", order.Assigned).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&dtos, "status = ?", int(order.Assigned)).Error; err != nil {
 		return nil, err
 	}
 
