@@ -106,7 +106,7 @@ func (r *GormCourierRepository) GetAllFree(ctx context.Context) ([]*courier.Cour
 		Preload("StoragePlaces").
 		Table("couriers").
 		Select("couriers.*").
-		Joins("LEFT JOIN orders ON couriers.id = orders.courier_id AND orders.status = ?", order.Assigned).
+		Joins("LEFT JOIN orders ON couriers.id = orders.courier_id AND orders.status = ?", int(order.Assigned)).
 		Where("orders.courier_id IS NULL").
 		Find(&dtos).Error; err != nil {
 		return nil, err
