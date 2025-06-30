@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"delivery/internal/adapters/in/http"
 	"delivery/internal/adapters/out/postgres"
 	"delivery/internal/core/application/usecases/commands"
 	"delivery/internal/core/application/usecases/queries"
+	"delivery/internal/jobs"
+	"log/slog"
 
 	"gorm.io/gorm"
 )
@@ -11,12 +14,14 @@ import (
 type CompositionRoot struct {
 	gormDB     *gorm.DB
 	uowFactory postgres.GormUnitOfWorkFactory
+	logger     *slog.Logger
 }
 
-func NewCompositionRoot(_ Config, gormDB *gorm.DB) CompositionRoot {
+func NewCompositionRoot(_ Config, gormDB *gorm.DB, logger *slog.Logger) CompositionRoot {
 	return CompositionRoot{
 		gormDB:     gormDB,
 		uowFactory: *postgres.NewGormUnitOfWorkFactory(gormDB),
+		logger:     logger,
 	}
 }
 
@@ -61,6 +66,27 @@ func (c *CompositionRoot) CreateGetAllCouriersQueryHandler() queries.GetAllCouri
 
 func (c *CompositionRoot) CreateGetUncompletedOrdersQueryHandler() queries.GetUncompletedOrdersQueryHandler {
 	return queries.NewGetUncompletedOrdersQueryHandler(c.gormDB)
+}
+
+func (c *CompositionRoot) CreateHTTPServer() *http.Server {
+	createCourierHandler := c.CreateCreateCourierCommandHandler()
+	createOrderHandler := c.CreateCreateOrderCommandHandler()
+	getAllCouriersHandler := c.CreateGetAllCouriersQueryHandler()
+	getUncompletedOrdersHandler := c.CreateGetUncompletedOrdersQueryHandler()
+
+	return http.NewServer(
+		createCourierHandler,
+		createOrderHandler,
+		getAllCouriersHandler,
+		getUncompletedOrdersHandler,
+	)
+}
+
+func (c *CompositionRoot) CreateJobManager() *jobs.JobManager {
+	moveCouriersHandler := c.CreateMoveCouriersCommandHandler()
+	assignCourierHandler := c.CreateAssignCourierCommandHandler()
+
+	return jobs.NewJobManager(moveCouriersHandler, assignCourierHandler, c.logger)
 }
 
 type FuncCourierUoWFactory func() commands.CourierUoW

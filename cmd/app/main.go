@@ -2,24 +2,34 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"delivery/cmd"
 	"delivery/internal/adapters/out/postgres/courierrepo"
 	"delivery/internal/adapters/out/postgres/orderrepo"
+	"delivery/internal/generated/servers"
 	"delivery/internal/pkg/errs"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
+	_ "github.com/lib/pq"
+	echoSwagger "github.com/swaggo/echo-swagger"
+	"github.com/swaggo/swag"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func main() {
+	// Register swagger documentation
+	swag.Register("swagger", &swaggerSpec{})
+
 	configs := getConfigs()
 
 	connectionString, err := makeConnectionString(
@@ -42,10 +52,19 @@ func main() {
 	gormDB := mustGormOpen(connectionString)
 	mustAutoMigrate(gormDB)
 
+	logger := slog.Default()
 	app := cmd.NewCompositionRoot(
 		configs,
 		gormDB,
+		logger,
 	)
+
+	// Start background jobs
+	jobManager := app.CreateJobManager()
+	if startErr := jobManager.StartAll(); startErr != nil {
+		log.Fatal("Failed to start jobs:", startErr)
+	}
+
 	startWebServer(app, configs.HTTPPort)
 }
 
@@ -75,12 +94,26 @@ func goDotEnvVariable(key string) string {
 	return os.Getenv(key)
 }
 
-func startWebServer(_ cmd.CompositionRoot, port string) {
+func startWebServer(app cmd.CompositionRoot, port string) {
 	e := echo.New()
+
+	// Health check endpoint
 	e.GET("/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Healthy")
 	})
 
+	// Swagger UI endpoint
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	// Create HTTP server with all dependencies
+	httpServer := app.CreateHTTPServer()
+
+	// Register API routes
+	servers.RegisterHandlers(e, httpServer)
+
+	log.Printf("Starting HTTP server on port %s", port)
+	log.Printf("Swagger UI available at: http://localhost:%s/swagger/index.html", port)
+	log.Printf("OpenAPI spec available at: http://localhost:%s/swagger/doc.json", port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%s", port)))
 }
 
@@ -174,7 +207,13 @@ func mustGormOpen(connectionString string) *gorm.DB {
 			DSN:                  connectionString,
 			PreferSimpleProtocol: true,
 		},
-	), &gorm.Config{})
+	), &gorm.Config{
+		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		}),
+	})
 	if err != nil {
 		log.Fatalf("connection to postgres through gorm\n: %s", err)
 	}
@@ -196,4 +235,18 @@ func mustAutoMigrate(db *gorm.DB) {
 	if err != nil {
 		log.Fatalf("Ошибка миграции: %v", err)
 	}
+}
+
+type swaggerSpec struct{}
+
+func (s *swaggerSpec) ReadDoc() string {
+	swagger, err := servers.GetSwagger()
+	if err != nil {
+		return "{}"
+	}
+	doc, err := json.Marshal(swagger)
+	if err != nil {
+		return "{}"
+	}
+	return string(doc)
 }

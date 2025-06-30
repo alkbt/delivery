@@ -18,7 +18,7 @@ type OrderDTO struct {
 	CourierID *uuid.UUID  `gorm:"type:uuid;index"`
 	Location  LocationDTO `gorm:"embedded;embeddedPrefix:location_"`
 	Volume    int
-	Status    order.Status `gorm:"type:int"`
+	Status    int
 }
 
 // TableName specifies the database table name for order entities.
@@ -51,7 +51,7 @@ func fromDomain(order *order.Order) OrderDTO {
 			Y: order.Location().Y(),
 		},
 		Volume: order.Volume(),
-		Status: order.Status(),
+		Status: int(order.Status()),
 	}
 }
 
@@ -78,5 +78,5 @@ func toDomain(dto OrderDTO) (*order.Order, error) {
 		return nil, err
 	}
 
-	return order.RestoreOrder(id, loc, dto.Volume, dto.Status, courierID)
+	return order.RestoreOrder(id, loc, dto.Volume, order.Status(dto.Status), courierID)
 }

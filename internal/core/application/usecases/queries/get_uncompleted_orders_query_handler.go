@@ -58,7 +58,7 @@ func (h GetUncompletedOrdersQueryHandler) Handle(
 		FROM orders
 		WHERE status != ?
 		ORDER BY id
-	`, order.Completed).Rows()
+	`, int(order.Completed)).Rows()
 	if err != nil {
 		return nil, err
 	}
